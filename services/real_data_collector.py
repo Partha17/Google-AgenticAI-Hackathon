@@ -251,7 +251,7 @@ class RealDataCollector:
         return stats
     
     def get_latest_financial_summary(self) -> dict:
-        """Get a summary of the latest financial data"""
+        """Get a summary of the latest financial data with proper parsing"""
         db = SessionLocal()
         summary = {
             "net_worth": "N/A",
@@ -259,40 +259,107 @@ class RealDataCollector:
             "total_liabilities": "N/A",
             "credit_score": "N/A",
             "epf_balance": "N/A",
-            "last_updated": "N/A"
+            "last_updated": "N/A",
+            "bank_balance": "N/A"
         }
         
+        def extract_financial_data(mcp_record):
+            """Extract financial data from MCP record with proper parsing"""
+            if not mcp_record:
+                return {}
+            
+            try:
+                # Get the data from the record
+                record_data = mcp_record.get_data()
+                
+                # Handle different data structures
+                if isinstance(record_data, dict):
+                    # Check if it's the raw response format
+                    if 'data' in record_data and 'content' in record_data['data']:
+                        # Parse the JSON content
+                        import json
+                        content = record_data['data']['content'][0]['text']
+                        parsed_data = json.loads(content)
+                        return parsed_data
+                    else:
+                        return record_data
+                
+                # Try to parse as JSON string
+                if isinstance(record_data, str):
+                    import json
+                    return json.loads(record_data)
+                    
+                return record_data
+            except Exception as e:
+                logger.error(f"Error parsing financial data: {e}")
+                return {}
+        
         try:
-            # Get latest net worth data
+            # Get net worth data
             latest_nw = db.query(MCPData).filter(
                 MCPData.data_type == "net_worth"
             ).order_by(MCPData.timestamp.desc()).first()
             
             if latest_nw:
-                nw_data = latest_nw.get_data()
-                summary["net_worth"] = nw_data.get("total_net_worth", "N/A")
-                summary["total_assets"] = nw_data.get("total_assets", "N/A")
-                summary["total_liabilities"] = nw_data.get("total_liabilities", "N/A")
+                nw_data = extract_financial_data(latest_nw)
+                if 'netWorthResponse' in nw_data:
+                    net_worth_response = nw_data['netWorthResponse']
+                    
+                    # Extract total net worth
+                    if 'totalNetWorthValue' in net_worth_response:
+                        summary["net_worth"] = int(net_worth_response['totalNetWorthValue']['units'])
+                    
+                    # Calculate total assets
+                    total_assets = 0
+                    if 'assetValues' in net_worth_response:
+                        for asset in net_worth_response['assetValues']:
+                            total_assets += int(asset['value']['units'])
+                    summary["total_assets"] = total_assets
+                    
+                    # Calculate total liabilities
+                    total_liabilities = 0
+                    if 'liabilityValues' in net_worth_response:
+                        for liability in net_worth_response['liabilityValues']:
+                            total_liabilities += int(liability['value']['units'])
+                    summary["total_liabilities"] = total_liabilities
+                
+                # Extract bank balance from account details
+                if 'accountDetailsBulkResponse' in nw_data:
+                    bank_balance = 0
+                    account_map = nw_data['accountDetailsBulkResponse']['accountDetailsMap']
+                    for account_id, account_info in account_map.items():
+                        if 'depositSummary' in account_info:
+                            balance = int(account_info['depositSummary']['currentBalance']['units'])
+                            bank_balance += balance
+                    summary["bank_balance"] = bank_balance
+                
                 summary["last_updated"] = latest_nw.timestamp.strftime("%Y-%m-%d %H:%M")
             
-            # Get latest credit report
+            # Get credit score
             latest_credit = db.query(MCPData).filter(
                 MCPData.data_type == "credit_report"
             ).order_by(MCPData.timestamp.desc()).first()
             
             if latest_credit:
-                credit_data = latest_credit.get_data()
-                summary["credit_score"] = credit_data.get("credit_score", "N/A")
+                credit_data = extract_financial_data(latest_credit)
+                if 'creditReports' in credit_data and len(credit_data['creditReports']) > 0:
+                    credit_report = credit_data['creditReports'][0]
+                    if 'creditReportData' in credit_report and 'score' in credit_report['creditReportData']:
+                        summary["credit_score"] = int(credit_report['creditReportData']['score']['bureauScore'])
             
-            # Get latest EPF data
+            # Get EPF balance
             latest_epf = db.query(MCPData).filter(
                 MCPData.data_type == "epf_details"
             ).order_by(MCPData.timestamp.desc()).first()
             
             if latest_epf:
-                epf_data = latest_epf.get_data()
-                summary["epf_balance"] = epf_data.get("epf_balance", "N/A")
-            
+                epf_data = extract_financial_data(latest_epf)
+                if 'uanAccounts' in epf_data and len(epf_data['uanAccounts']) > 0:
+                    uan_account = epf_data['uanAccounts'][0]
+                    if 'rawDetails' in uan_account and 'overall_pf_balance' in uan_account['rawDetails']:
+                        pf_balance = uan_account['rawDetails']['overall_pf_balance']
+                        summary["epf_balance"] = int(pf_balance['current_pf_balance'])
+
         except Exception as e:
             logger.error(f"Error getting financial summary: {e}")
         finally:
