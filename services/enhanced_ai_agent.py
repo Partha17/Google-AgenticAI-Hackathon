@@ -18,7 +18,7 @@ class EnhancedAIInsightAgent:
             raise ValueError("Google API key is required. Please set GOOGLE_API_KEY in your .env file")
         
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
+            model=settings.gemini_model,
             google_api_key=settings.google_api_key,
             temperature=0.3  # Lower temperature for more consistent financial analysis
         )
@@ -391,7 +391,7 @@ class EnhancedAIInsightAgent:
             # Add enhanced metadata
             insight_data["source_record_ids"] = [r.id for r in records]
             insight_data["generated_at"] = datetime.utcnow().isoformat()
-            insight_data["model"] = "gemini-2.0-flash-exp-enhanced"
+            insight_data["model"] = f"{settings.gemini_model}-enhanced"
             insight_data["analysis_version"] = "2.0_advanced"
             
             return insight_data

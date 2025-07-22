@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 from services.real_data_collector import real_data_collector
 from services.enhanced_ai_agent import enhanced_ai_agent
+from services.quota_manager import quota_manager
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -16,10 +17,15 @@ class InsightGenerator:
         self.running = False
         self.thread = None
     
-    def generate_insights(self):
-        """Generate insights from unprocessed MCP data"""
+    def generate_insights(self, force: bool = False):
+        """Generate insights from unprocessed MCP data with quota management"""
         try:
             logger.info("Starting insight generation...")
+            
+            # Check if on-demand only mode is enabled
+            if settings.ai_insights_on_demand_only and not force:
+                logger.info("AI insights are set to on-demand only. Use 'python3 main.py generate' to generate insights manually.")
+                return
             
             # Get unprocessed data
             unprocessed_data = real_data_collector.get_unprocessed_data()
@@ -30,16 +36,39 @@ class InsightGenerator:
             
             logger.info(f"Found {len(unprocessed_data)} unprocessed records")
             
-            # Process data in batches
+            # Estimate number of AI requests needed
             batch_size = 20  # Process 20 records at a time
+            estimated_batches = (len(unprocessed_data) + batch_size - 1) // batch_size
+            estimated_requests = estimated_batches * 3  # Each batch generates ~3 insights
+            
+            # Check quota availability
+            quota_status = quota_manager.check_quota_available(estimated_requests)
+            if not quota_status["available"]:
+                logger.warning(f"Quota limit reached. Daily: {quota_status['daily_used']}/{quota_status['daily_limit']}, Hourly: {quota_status['hourly_used']}/{quota_status['hourly_limit']}")
+                logger.info("Skipping insight generation to preserve quota. Use 'python3 main.py quota' to check status.")
+                return
+            
+            logger.info(f"Quota check passed. Processing {estimated_batches} batches with estimated {estimated_requests} AI requests")
+            
+            # Process data in batches
             processed_ids = []
+            actual_requests = 0
             
             for i in range(0, len(unprocessed_data), batch_size):
                 batch = unprocessed_data[i:i+batch_size]
                 
+                # Check quota before each batch
+                if not quota_manager.check_quota_available(3)["available"]:
+                    logger.warning("Quota limit reached during processing. Stopping.")
+                    break
+                
                 try:
                     # Generate insights for this batch using enhanced agent
                     insights = enhanced_ai_agent.analyze_data_batch(batch)
+                    actual_requests += 3  # Approximate requests per batch
+                    
+                    # Record quota usage
+                    quota_manager.record_usage(3)
                     
                     if insights:
                         # Store insights using enhanced storage
@@ -61,9 +90,16 @@ class InsightGenerator:
             logger.error(f"Error during insight generation: {e}")
     
     def start_generation(self):
-        """Start periodic insight generation"""
+        """Start periodic insight generation (only if not in on-demand mode)"""
         if self.running:
             logger.warning("Insight generation is already running")
+            return
+        
+        # Check if on-demand only mode is enabled
+        if settings.ai_insights_on_demand_only:
+            logger.info("🚫 AI insights are set to ON-DEMAND ONLY mode. Automatic generation disabled.")
+            logger.info("📊 Use 'python3 main.py generate' to generate insights manually.")
+            logger.info("📈 Use 'python3 main.py quota' to check quota status.")
             return
         
         self.running = True

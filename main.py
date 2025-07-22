@@ -164,10 +164,72 @@ class AgenticAISystem:
         return True
     
     def generate_now(self):
-        """Trigger immediate insight generation"""
+        """Trigger immediate insight generation (forces generation even in on-demand mode)"""
         logger.info("Triggering immediate insight generation...")
-        insight_generator.generate_insights()
+        from services.quota_manager import quota_manager
+        
+        # Show quota status first
+        quota_stats = quota_manager.get_usage_stats()
+        quota_status = quota_stats["quota_status"]
+        
+        logger.info(f"📊 Current Quota Status:")
+        logger.info(f"   Daily: {quota_status['daily_used']}/{quota_status['daily_limit']} requests used")
+        logger.info(f"   Hourly: {quota_status['hourly_used']}/{quota_status['hourly_limit']} requests used")
+        logger.info(f"   Model: {quota_stats['model']}")
+        
+        if not quota_status["available"]:
+            logger.warning("❌ Quota limit reached! Cannot generate insights.")
+            logger.info("💡 Try again later when quota resets or increase limits in config.")
+            return False
+        
+        logger.info("✅ Quota available. Proceeding with insight generation...")
+        insight_generator.generate_insights(force=True)  # Force generation even in on-demand mode
         logger.info("Insight generation completed")
+        return True
+    
+    def show_quota_status(self):
+        """Show current AI quota usage and settings"""
+        from services.quota_manager import quota_manager
+        
+        logger.info("📊 AI Quota Status and Settings")
+        logger.info("=" * 50)
+        
+        stats = quota_manager.get_usage_stats()
+        quota_status = stats["quota_status"]
+        settings_info = stats["settings"]
+        
+        # Quota usage
+        logger.info(f"📈 Current Usage:")
+        logger.info(f"   Daily: {quota_status['daily_used']}/{quota_status['daily_limit']} requests ({(quota_status['daily_used']/quota_status['daily_limit']*100):.1f}%)")
+        logger.info(f"   Hourly: {quota_status['hourly_used']}/{quota_status['hourly_limit']} requests ({(quota_status['hourly_used']/quota_status['hourly_limit']*100):.1f}%)")
+        
+        # Status
+        status_icon = "✅" if quota_status["available"] else "❌"
+        logger.info(f"   Status: {status_icon} {'Available' if quota_status['available'] else 'Quota Exceeded'}")
+        
+        # Settings
+        logger.info(f"\n⚙️  Settings:")
+        logger.info(f"   Model: {stats['model']}")
+        logger.info(f"   On-Demand Only: {'Yes' if settings_info['on_demand_only'] else 'No'}")
+        logger.info(f"   Max Daily Requests: {settings_info['max_daily_requests']}")
+        logger.info(f"   Max Hourly Requests: {settings_info['max_hourly_requests']}")
+        
+        # Recommendations
+        logger.info(f"\n💡 Usage Tips:")
+        if quota_status["available"]:
+            remaining_daily = quota_status["daily_remaining"]
+            remaining_hourly = quota_status["hourly_remaining"]
+            logger.info(f"   • You can generate ~{min(remaining_daily//3, remaining_hourly//3)} more batches of insights")
+            logger.info(f"   • Daily quota resets at midnight")
+            logger.info(f"   • Hourly quota resets every hour")
+        else:
+            logger.info(f"   • Wait for quota reset or increase limits in environment variables")
+            logger.info(f"   • Set MAX_DAILY_AI_REQUESTS and MAX_HOURLY_AI_REQUESTS to increase limits")
+        
+        logger.info(f"\n🔧 Commands:")
+        logger.info(f"   • python3 main.py generate  - Generate insights manually")
+        logger.info(f"   • python3 main.py status    - Check system status")
+        logger.info(f"   • python3 main.py collect   - Collect data without AI generation")
     
     def test_connection(self):
         """Test Fi MCP server connection"""
@@ -178,7 +240,7 @@ def main():
     """Main entry point with enhanced CLI interface"""
     parser = argparse.ArgumentParser(description="Agentic AI Financial Insights System with Real Fi MCP Data")
     parser.add_argument('command', nargs='?', default='start',
-                       choices=['start', 'stop', 'status', 'collect', 'generate', 'dashboard', 'test'],
+                       choices=['start', 'stop', 'status', 'collect', 'generate', 'dashboard', 'test', 'quota'],
                        help='Command to execute')
     parser.add_argument('--no-collector', action='store_true',
                        help='Start without data collector')
@@ -211,6 +273,9 @@ def main():
     
     elif args.command == 'generate':
         system.generate_now()
+    
+    elif args.command == 'quota':
+        system.show_quota_status()
     
     elif args.command == 'test':
         logger.info("Testing Fi MCP server connection...")
