@@ -43,8 +43,10 @@ class FiMCPClient:
     
     def _make_mcp_request(self, method: str, params: Dict = None) -> Dict:
         """Make an MCP JSON-RPC request"""
+        # Only generate session ID if we don't have one
         if not self.session_id:
             self.session_id = self._generate_session_id()
+            logger.info(f"Generated new session ID: {self.session_id}")
         
         headers = {
             "Content-Type": "application/json",
@@ -82,7 +84,11 @@ class FiMCPClient:
         try:
             logger.info(f"Authenticating with phone number: {phone_number}")
             
-            # First, try to call a tool to trigger authentication flow
+            # Use a consistent session ID for all requests
+            if not self.session_id:
+                self.session_id = self._generate_session_id()
+            
+            # First, try to call a tool to check if we're already authenticated
             result = self._make_mcp_request("tools/call", {
                 "name": "fetch_net_worth",
                 "arguments": {}
@@ -91,32 +97,52 @@ class FiMCPClient:
             if "login_url" in str(result):
                 logger.info("Authentication required - simulating login flow")
                 
-                # In a real scenario, user would visit the login URL
-                # For automation, we'll simulate the authentication
-                # The Fi MCP server uses dummy auth, so we just need to establish a session
+                # Extract login URL and session ID from the response
+                login_url = None
+                if "login_url" in str(result):
+                    import re
+                    url_match = re.search(r'http://localhost:\d+/mockWebPage\?sessionId=([^"]+)', str(result))
+                    if url_match:
+                        login_url = url_match.group(0)
+                        logger.info(f"Login URL: {login_url}")
                 
-                # Generate new session and try again
-                self.session_id = self._generate_session_id()
+                # Simulate the login POST request to establish session
+                try:
+                    login_data = {
+                        'sessionId': self.session_id,
+                        'phoneNumber': phone_number
+                    }
+                    
+                    login_response = requests.post(
+                        f"{self.base_url}/login",
+                        data=login_data,
+                        timeout=10
+                    )
+                    
+                    if login_response.status_code == 200:
+                        logger.info("Login simulation successful")
+                        time.sleep(1)  # Brief wait for session establishment
+                        
+                        # Now try the original request again
+                        result = self._make_mcp_request("tools/call", {
+                            "name": "fetch_net_worth", 
+                            "arguments": {}
+                        })
+                        
+                        if "netWorthResponse" in str(result) or ("result" in result and "login_url" not in str(result)):
+                            self.authenticated = True
+                            logger.info("Authentication successful")
+                            return True
+                    else:
+                        logger.error(f"Login simulation failed: {login_response.status_code}")
+                        
+                except Exception as e:
+                    logger.error(f"Login simulation error: {e}")
                 
-                # Wait a moment and retry
-                time.sleep(2)
-                
-                # Try the request again
-                result = self._make_mcp_request("tools/call", {
-                    "name": "fetch_net_worth", 
-                    "arguments": {}
-                })
-                
-                if "netWorthResponse" in str(result) or "result" in result:
-                    self.authenticated = True
-                    logger.info("Authentication successful")
-                    return True
-                else:
-                    logger.warning("Authentication may be required - login URL needed")
-                    logger.info(f"Login URL pattern detected. Use phone: {phone_number}")
-                    return False
+                logger.warning(f"Authentication failed after login simulation. Session ID: {self.session_id}")
+                return False
             
-            elif "result" in result or "netWorthResponse" in str(result):
+            elif "result" in result and "login_url" not in str(result):
                 self.authenticated = True
                 logger.info("Already authenticated or no auth required")
                 return True
@@ -140,6 +166,16 @@ class FiMCPClient:
             "arguments": {}
         })
         
+        # Check if login is required and re-authenticate
+        if "login_url" in str(result):
+            logger.info("Re-authentication required for net_worth")
+            self.authenticated = False
+            if self.authenticate():
+                result = self._make_mcp_request("tools/call", {
+                    "name": "fetch_net_worth",
+                    "arguments": {}
+                })
+        
         return self._process_mcp_response(result, "net_worth")
     
     def fetch_bank_transactions(self) -> Dict[str, Any]:
@@ -152,6 +188,16 @@ class FiMCPClient:
             "name": "fetch_bank_transactions",
             "arguments": {}
         })
+        
+        # Check if login is required and re-authenticate
+        if "login_url" in str(result):
+            logger.info("Re-authentication required for bank_transactions")
+            self.authenticated = False
+            if self.authenticate():
+                result = self._make_mcp_request("tools/call", {
+                    "name": "fetch_bank_transactions",
+                    "arguments": {}
+                })
         
         return self._process_mcp_response(result, "bank_transactions")
     
@@ -179,6 +225,16 @@ class FiMCPClient:
             "arguments": {}
         })
         
+        # Check if login is required and re-authenticate
+        if "login_url" in str(result):
+            logger.info("Re-authentication required for epf_details")
+            self.authenticated = False
+            if self.authenticate():
+                result = self._make_mcp_request("tools/call", {
+                    "name": "fetch_epf_details",
+                    "arguments": {}
+                })
+        
         return self._process_mcp_response(result, "epf_details")
     
     def fetch_credit_report(self) -> Dict[str, Any]:
@@ -191,6 +247,16 @@ class FiMCPClient:
             "name": "fetch_credit_report",
             "arguments": {}
         })
+        
+        # Check if login is required and re-authenticate
+        if "login_url" in str(result):
+            logger.info("Re-authentication required for credit_report")
+            self.authenticated = False
+            if self.authenticate():
+                result = self._make_mcp_request("tools/call", {
+                    "name": "fetch_credit_report",
+                    "arguments": {}
+                })
         
         return self._process_mcp_response(result, "credit_report")
     
