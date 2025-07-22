@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 from services.data_collector import data_collector
 from services.ai_agent import ai_agent
+from services.enhanced_ai_agent import enhanced_ai_agent
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -38,12 +39,12 @@ class InsightGenerator:
                 batch = unprocessed_data[i:i+batch_size]
                 
                 try:
-                    # Generate insights for this batch
-                    insights = ai_agent.analyze_data_batch(batch)
+                    # Generate insights for this batch using enhanced agent
+                    insights = enhanced_ai_agent.analyze_data_batch(batch)
                     
                     if insights:
-                        # Store insights
-                        stored_ids = ai_agent.store_insights(insights)
+                        # Store insights using enhanced storage
+                        stored_ids = enhanced_ai_agent.store_enhanced_insights(insights)
                         logger.info(f"Generated and stored {len(insights)} insights")
                         
                         # Mark records as processed
