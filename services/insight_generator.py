@@ -3,8 +3,7 @@ import schedule
 import threading
 import time
 from datetime import datetime
-from services.data_collector import data_collector
-from services.ai_agent import ai_agent
+from services.real_data_collector import real_data_collector
 from services.enhanced_ai_agent import enhanced_ai_agent
 from config import settings
 
@@ -23,7 +22,7 @@ class InsightGenerator:
             logger.info("Starting insight generation...")
             
             # Get unprocessed data
-            unprocessed_data = data_collector.get_unprocessed_data()
+            unprocessed_data = real_data_collector.get_unprocessed_data()
             
             if not unprocessed_data:
                 logger.info("No unprocessed data found")
@@ -49,7 +48,7 @@ class InsightGenerator:
                         
                         # Mark records as processed
                         batch_ids = [record.id for record in batch]
-                        data_collector.mark_as_processed(batch_ids)
+                        real_data_collector.mark_as_processed(batch_ids)
                         processed_ids.extend(batch_ids)
                     
                 except Exception as e:

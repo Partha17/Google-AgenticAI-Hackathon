@@ -1,92 +1,139 @@
 # 🤖 Agentic AI Financial Insights System
 
-A comprehensive agentic AI system that collects financial data from MCP (Model Context Protocol) servers, generates intelligent insights using Google's Gemini AI through LangChain, and provides an interactive dashboard for analysis.
+A comprehensive financial analysis system that integrates with **Fi MCP (Model Context Protocol)** to collect real financial data and generate AI-powered insights using Google Gemini AI with advanced prompt engineering.
 
-## 🚀 Features
+## 🌟 Key Features
 
-- **MCP Server Integration**: Connect to Financial MCP servers (currently with mock data)
-- **Periodic Data Collection**: Automated data collection from MCP sources
-- **AI-Powered Analysis**: LangChain agents with Gemini AI for intelligent insights
-- **Real-time Dashboard**: Interactive Streamlit dashboard for data visualization
-- **Dual Database System**: Separate storage for raw MCP data and AI insights
-- **Configurable Intervals**: Customizable collection and analysis frequencies
+### 💰 Real Financial Data Integration
+- **Fi MCP Server Integration**: Connects to real financial data sources
+- **Net Worth Analysis**: Complete asset and liability breakdown
+- **Bank Transactions**: Transaction history and spending patterns
+- **EPF Details**: Employee Provident Fund balance and insights
+- **Credit Reports**: Credit score monitoring and improvement tips
 
-## 📋 Prerequisites
+### 🧠 Enhanced AI Analysis
+- **Advanced AI Agent**: Institutional-grade financial analysis using enhanced prompt engineering
+- **Google Gemini 2.0**: Latest AI model for sophisticated financial insights
+- **Chain-of-Thought Reasoning**: Transparent, logical financial analysis
+- **Risk Assessment**: Comprehensive portfolio risk evaluation
+- **Opportunity Identification**: Investment and financial opportunities
 
-- Python 3.8+
-- Google AI API Key (for Gemini)
-- SQLite (included with Python)
+### 📊 Data-Specific Dashboard
+- **Net Worth Panel**: Asset/liability visualization and breakdown
+- **Bank Transactions Panel**: Transaction analysis and spending insights
+- **EPF Panel**: Provident fund tracking and projections
+- **Credit Report Panel**: Credit score monitoring with improvement tips
+- **AI Insights Panel**: Generated financial recommendations and analysis
 
-## 🛠️ Installation
+## 🏗️ System Architecture
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd Google-AgenticAI-Hackathon
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Setup environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your Google API key:
-   ```
-   GOOGLE_API_KEY=your_gemini_api_key_here
-   ```
-
-4. **Initialize the database**
-   ```bash
-   python main.py status
-   ```
+```
+Fi MCP Server (Go) → Real Data Collector (Python) → Enhanced AI Agent (LangChain + Gemini) → Insights Dashboard (Streamlit)
+                                     ↓
+                            SQLite Database (Financial Data + AI Insights)
+```
 
 ## 🚀 Quick Start
 
-### Start the Complete System
+### Prerequisites
+
+- **Python 3.9+**
+- **Go 1.23+** (for Fi MCP server)
+- **Google Gemini API Key**
+
+### 1. Setup Fi MCP Server
+
 ```bash
-python main.py start
+# Clone and setup Fi MCP server
+mkdir fi-mcp-server && cd fi-mcp-server
+git clone https://github.com/epiFi/fi-mcp-dev.git .
+go mod tidy
+
+# Start Fi MCP server
+FI_MCP_PORT=8080 go run . &
+cd ..
 ```
 
-This starts both data collection and AI insight generation.
+### 2. Setup Python Environment
 
-### Start Individual Components
 ```bash
-# Start only data collection
-python main.py start --no-generator
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Start only insight generation
-python main.py start --no-collector
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### Launch the Dashboard
+### 3. Configuration
+
 ```bash
-# Option 1: Through main script
-python main.py dashboard
+# Setup environment variables
+cp .env.example .env
 
-# Option 2: Direct Streamlit
-streamlit run dashboard/app.py
+# Edit .env file:
+GOOGLE_API_KEY=your_gemini_api_key_here
+DATABASE_URL=sqlite:///./agentic_ai.db
+MCP_SERVER_URL=http://localhost:8080
+LOG_LEVEL=INFO
+COLLECTION_INTERVAL_MINUTES=5
+INSIGHTS_GENERATION_INTERVAL_MINUTES=15
 ```
 
-### Manual Operations
+### 4. Run the System
+
 ```bash
-# Check system status
-python main.py status
+# Test Fi MCP connection
+python3 main.py test
 
-# Trigger immediate data collection
-python main.py collect
+# Start data collection and AI analysis
+python3 main.py start
 
-# Generate insights now
-python main.py generate
+# Launch dashboard
+python3 main.py dashboard
 ```
 
-## 🏗️ Architecture
+## 📋 Available Commands
 
+```bash
+# System operations
+python3 main.py start          # Start data collection and AI analysis
+python3 main.py status         # Check system status
+python3 main.py collect        # Collect data immediately
+python3 main.py generate       # Generate insights immediately
+python3 main.py test           # Test Fi MCP server connection
+python3 main.py dashboard      # Launch Streamlit dashboard
+
+# Options
+--no-collector                 # Start without data collector
+--no-generator                 # Start without insight generator
 ```
+
+## 💾 Database Schema
+
+### MCP Data Table
+- **Real Financial Data**: Net worth, transactions, EPF, credit reports
+- **Timestamps**: Data collection timeline
+- **Processing Status**: Track AI analysis progress
+
+### AI Insights Table
+- **Enhanced Insights**: Institutional-grade financial analysis
+- **Confidence Scores**: AI certainty in recommendations
+- **Metadata**: Key factors, recommendations, reasoning chains
+
+## 🎯 Dashboard Features
+
+### 📈 Overview Panel
+- Financial summary metrics (Net Worth, Credit Score, EPF Balance)
+- Data collection status
+- Recent AI insights preview
+
+### 💰 Net Worth Panel
+- Total net worth calculation
+- Asset distribution pie charts
+- Liability breakdown
+- Investment portfolio visualization
+
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   MCP Server    │───▶│  Data Collector  │───▶│   Database      │
 │   (Fi MCP)      │    │  Service         │    │   (MCP Data)    │
