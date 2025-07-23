@@ -1,655 +1,317 @@
 """
-Risk Assessment Agent - ADK Implementation
-Specialized agent for comprehensive financial risk analysis and management
+Risk Assessment Agent - ADK Implementation with AI-Powered Analysis
+Specialized agent for comprehensive financial risk analysis using Google Gemini
 """
 
 import asyncio
 import json
 import logging
-import statistics
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from adk_agents.agent_config import adk_config
+from adk_agents.ai_analysis_base import AIAnalysisBase
 
 logger = logging.getLogger(__name__)
 
-class RiskAssessmentAgent:
-    """ADK-based Risk Assessment Agent for financial risk analysis"""
+class RiskAssessmentAgent(AIAnalysisBase):
+    """ADK-based Risk Assessment Agent powered by Gemini AI for financial risk analysis"""
     
     def __init__(self):
         self.agent_id = "risk_assessment_agent"
-        self.config = adk_config.get_agent_definitions()[self.agent_id]
+        config = adk_config.get_agent_definitions()[self.agent_id]
+        super().__init__(self.agent_id, config)
         
     async def analyze_portfolio_risk(self, financial_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Comprehensive portfolio risk analysis
-        Main tool function for risk assessment
+        AI-powered comprehensive portfolio risk analysis using Gemini
         """
         try:
-            logger.info("Starting comprehensive portfolio risk analysis...")
+            logger.info("Starting AI-powered comprehensive portfolio risk analysis...")
             
-            risk_analysis = {
-                "agent_id": self.agent_id,
-                "timestamp": datetime.utcnow().isoformat(),
-                "overall_risk_level": "medium",
-                "risk_score": 0.5,
-                "risk_categories": {},
-                "key_risks": [],
-                "mitigation_strategies": [],
-                "monitoring_alerts": []
-            }
+            specific_instructions = """
+            Perform a comprehensive portfolio risk analysis focusing on:
             
-            # Extract financial metrics from data
-            metrics = self._extract_financial_metrics(financial_data)
+            1. **Market Risk Assessment**:
+               - Asset concentration and diversification analysis
+               - Market volatility exposure
+               - Sector and geographic concentration risks
+               - Correlation analysis between holdings
             
-            # Perform different types of risk analysis
-            market_risk = await self._analyze_market_risk(metrics)
-            credit_risk = await self._analyze_credit_risk(metrics)
-            liquidity_risk = await self._analyze_liquidity_risk(metrics)
-            concentration_risk = await self._analyze_concentration_risk(metrics)
+            2. **Credit Risk Evaluation**:
+               - Credit score assessment and implications
+               - Debt-to-asset ratio analysis
+               - Payment history and credit utilization
+               - Default probability estimation
             
-            # Compile risk categories
-            risk_analysis["risk_categories"] = {
-                "market_risk": market_risk,
-                "credit_risk": credit_risk,
-                "liquidity_risk": liquidity_risk,
-                "concentration_risk": concentration_risk
-            }
+            3. **Liquidity Risk Analysis**:
+               - Cash flow adequacy assessment
+               - Asset liquidity evaluation
+               - Emergency fund sufficiency
+               - Short-term funding risks
             
-            # Calculate overall risk score and level
-            overall_score = self._calculate_overall_risk_score(risk_analysis["risk_categories"])
-            risk_analysis["risk_score"] = overall_score
-            risk_analysis["overall_risk_level"] = self._determine_risk_level(overall_score)
+            4. **Concentration Risk Assessment**:
+               - Portfolio diversification measurement
+               - Single-asset exposure limits
+               - Industry/sector concentration
+               - Geographic concentration analysis
             
-            # Identify key risks
-            risk_analysis["key_risks"] = self._identify_key_risks(risk_analysis["risk_categories"])
+            5. **Overall Risk Profile**:
+               - Integrated risk score calculation
+               - Risk level categorization (low/medium/high)
+               - Key risk factors identification
+               - Risk mitigation recommendations
             
-            # Generate mitigation strategies
-            risk_analysis["mitigation_strategies"] = self._generate_mitigation_strategies(
-                risk_analysis["key_risks"], metrics
+            Provide specific numerical risk scores (0.0-1.0), detailed explanations,
+            and actionable mitigation strategies for each risk category.
+            """
+            
+            # Use AI analysis instead of mathematical formulas
+            risk_analysis = await self.ai_analyze(
+                analysis_type="portfolio_risk_assessment",
+                data=financial_data,
+                specific_instructions=specific_instructions,
+                output_format="json"
             )
             
-            # Set up monitoring alerts
-            risk_analysis["monitoring_alerts"] = self._setup_monitoring_alerts(
-                risk_analysis["risk_categories"]
-            )
+            # Ensure required fields are present with AI-generated values
+            if "error" not in risk_analysis:
+                # Validate and enhance AI response structure
+                risk_analysis = self._enhance_risk_analysis_structure(risk_analysis)
             
-            logger.info(f"Risk analysis completed - Overall risk level: {risk_analysis['overall_risk_level']}")
+            logger.info("AI-powered portfolio risk analysis completed")
             return risk_analysis
             
         except Exception as e:
-            logger.error(f"Error in portfolio risk analysis: {e}")
+            logger.error(f"Error in AI portfolio risk analysis: {e}")
             return {
                 "agent_id": self.agent_id,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
+                "fallback_analysis": "AI analysis failed, manual intervention required"
             }
     
-    async def stress_test_portfolio(self, financial_data: Dict[str, Any], 
-                                   scenarios: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def stress_test_portfolio(self, financial_data: Dict[str, Any], scenarios: List[Dict] = None) -> Dict[str, Any]:
         """
-        Perform stress testing on the portfolio under various market scenarios
+        AI-powered portfolio stress testing using various economic scenarios
         """
         try:
-            logger.info("Starting portfolio stress testing...")
+            logger.info("Starting AI-powered portfolio stress testing...")
             
+            # Define stress test scenarios if not provided
             if scenarios is None:
-                scenarios = self._get_default_stress_scenarios()
+                scenarios = [
+                    {"name": "Market Crash", "market_decline": 30, "interest_rate_change": 2.0},
+                    {"name": "Economic Recession", "gdp_decline": 5, "unemployment_increase": 4},
+                    {"name": "Interest Rate Spike", "interest_rate_change": 3.0, "bond_decline": 15},
+                    {"name": "Inflation Surge", "inflation_increase": 4, "real_return_impact": -2},
+                    {"name": "Credit Crisis", "credit_spread_widening": 300, "liquidity_crunch": True}
+                ]
             
-            stress_results = {
-                "agent_id": self.agent_id,
-                "timestamp": datetime.utcnow().isoformat(),
-                "scenarios_tested": len(scenarios),
-                "worst_case_loss": 0.0,
-                "best_case_gain": 0.0,
-                "scenario_results": [],
-                "risk_tolerance_assessment": "unknown"
-            }
+            specific_instructions = f"""
+            Perform comprehensive portfolio stress testing using these scenarios:
+            {json.dumps(scenarios, indent=2)}
             
-            metrics = self._extract_financial_metrics(financial_data)
-            base_portfolio_value = metrics.get("total_net_worth", 0)
+            For each scenario, analyze:
             
-            scenario_outcomes = []
+            1. **Portfolio Impact Assessment**:
+               - Estimated portfolio value decline/gain
+               - Asset-specific impacts by category
+               - Recovery timeline estimation
+               - Worst-case loss calculation
             
-            # Run each stress scenario
-            for scenario in scenarios:
-                outcome = await self._run_stress_scenario(metrics, scenario)
-                scenario_outcomes.append(outcome)
-                stress_results["scenario_results"].append(outcome)
+            2. **Liquidity Stress Analysis**:
+               - Cash flow impact under stress
+               - Asset liquidation requirements
+               - Time to liquidity for different assets
+               - Emergency fund adequacy
             
-            # Calculate aggregate stress test results
-            if scenario_outcomes:
-                losses = [o["portfolio_impact"] for o in scenario_outcomes if o["portfolio_impact"] < 0]
-                gains = [o["portfolio_impact"] for o in scenario_outcomes if o["portfolio_impact"] > 0]
-                
-                stress_results["worst_case_loss"] = min(losses) if losses else 0.0
-                stress_results["best_case_gain"] = max(gains) if gains else 0.0
-                
-                # Assess risk tolerance
-                max_loss_pct = abs(stress_results["worst_case_loss"]) / base_portfolio_value if base_portfolio_value > 0 else 0
-                stress_results["risk_tolerance_assessment"] = self._assess_risk_tolerance(max_loss_pct)
+            3. **Risk Tolerance Evaluation**:
+               - Current portfolio vs. stress scenarios
+               - Maximum tolerable loss assessment
+               - Recovery capacity analysis
+               - Psychological impact factors
             
-            logger.info("Portfolio stress testing completed")
+            4. **Scenario-Specific Recommendations**:
+               - Protective strategies for each scenario
+               - Portfolio adjustments needed
+               - Risk mitigation priorities
+               - Contingency planning
+            
+            Provide detailed numerical impact assessments, probability estimates,
+            and specific action plans for each stress scenario.
+            """
+            
+            stress_results = await self.ai_analyze(
+                analysis_type="portfolio_stress_testing",
+                data={"financial_data": financial_data, "stress_scenarios": scenarios},
+                specific_instructions=specific_instructions,
+                output_format="json"
+            )
+            
+            # Enhance structure for stress test results
+            if "error" not in stress_results:
+                stress_results = self._enhance_stress_test_structure(stress_results, scenarios)
+            
+            logger.info("AI-powered portfolio stress testing completed")
             return stress_results
             
         except Exception as e:
-            logger.error(f"Error in stress testing: {e}")
+            logger.error(f"Error in AI stress testing: {e}")
             return {
                 "agent_id": self.agent_id,
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat()
             }
     
-    async def monitor_risk_metrics(self, financial_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def monitor_risk_alerts(self, current_data: Dict[str, Any], alert_thresholds: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Monitor key risk metrics and generate alerts for threshold breaches
+        AI-powered continuous risk monitoring and alert system
         """
         try:
-            logger.info("Monitoring risk metrics...")
+            logger.info("Starting AI-powered risk monitoring...")
             
-            monitoring_results = {
-                "agent_id": self.agent_id,
-                "timestamp": datetime.utcnow().isoformat(),
-                "metrics_monitored": 0,
-                "alerts_triggered": 0,
-                "metric_status": {},
-                "active_alerts": [],
-                "recommendations": []
-            }
-            
-            metrics = self._extract_financial_metrics(financial_data)
-            
-            # Define risk thresholds and current values
-            risk_thresholds = self._get_risk_thresholds()
-            
-            for metric_name, threshold_config in risk_thresholds.items():
-                current_value = metrics.get(metric_name, 0)
-                threshold_value = threshold_config["threshold"]
-                operator = threshold_config["operator"]  # "greater", "less", "between"
-                
-                # Check if threshold is breached
-                breach_detected = self._check_threshold_breach(
-                    current_value, threshold_value, operator
-                )
-                
-                status = {
-                    "current_value": current_value,
-                    "threshold": threshold_value,
-                    "status": "alert" if breach_detected else "normal",
-                    "severity": threshold_config.get("severity", "medium")
+            if alert_thresholds is None:
+                alert_thresholds = {
+                    "max_portfolio_risk_score": 0.7,
+                    "min_diversification_score": 0.6,
+                    "max_debt_to_asset_ratio": 0.4,
+                    "min_credit_score": 650,
+                    "min_liquidity_ratio": 0.1
                 }
-                
-                monitoring_results["metric_status"][metric_name] = status
-                monitoring_results["metrics_monitored"] += 1
-                
-                if breach_detected:
-                    alert = {
-                        "metric": metric_name,
-                        "current_value": current_value,
-                        "threshold": threshold_value,
-                        "severity": threshold_config.get("severity", "medium"),
-                        "message": threshold_config.get("message", f"{metric_name} threshold breached"),
-                        "recommended_action": threshold_config.get("action", "Review and adjust")
-                    }
-                    monitoring_results["active_alerts"].append(alert)
-                    monitoring_results["alerts_triggered"] += 1
             
-            # Generate recommendations based on alerts
-            monitoring_results["recommendations"] = self._generate_monitoring_recommendations(
-                monitoring_results["active_alerts"]
+            specific_instructions = f"""
+            Perform continuous risk monitoring and alert analysis with these thresholds:
+            {json.dumps(alert_thresholds, indent=2)}
+            
+            Analyze and report:
+            
+            1. **Risk Threshold Monitoring**:
+               - Current vs. threshold comparisons
+               - Trend analysis for key metrics
+               - Early warning indicators
+               - Breach probability assessment
+            
+            2. **Dynamic Risk Assessment**:
+               - Real-time risk level evaluation
+               - Market condition impact
+               - Portfolio drift analysis
+               - Concentration creep detection
+            
+            3. **Alert Prioritization**:
+               - Critical alerts (immediate action needed)
+               - Warning alerts (monitor closely)
+               - Informational alerts (awareness only)
+               - False positive filtering
+            
+            4. **Recommended Actions**:
+               - Immediate interventions required
+               - Monitoring adjustments needed
+               - Threshold recalibrations
+               - Preventive measures
+            
+            Generate specific alerts with urgency levels, affected metrics,
+            and recommended response actions.
+            """
+            
+            monitoring_results = await self.ai_analyze(
+                analysis_type="risk_monitoring_and_alerts",
+                data={"current_data": current_data, "alert_thresholds": alert_thresholds},
+                specific_instructions=specific_instructions,
+                output_format="json"
             )
             
-            logger.info(f"Risk monitoring completed - {monitoring_results['alerts_triggered']} alerts triggered")
+            # Enhance structure for monitoring results
+            if "error" not in monitoring_results:
+                monitoring_results = self._enhance_monitoring_structure(monitoring_results)
+            
+            logger.info("AI-powered risk monitoring completed")
             return monitoring_results
             
         except Exception as e:
-            logger.error(f"Error in risk monitoring: {e}")
+            logger.error(f"Error in AI risk monitoring: {e}")
             return {
                 "agent_id": self.agent_id,
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat()
             }
     
-    def _extract_financial_metrics(self, financial_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract relevant financial metrics from collected data"""
-        metrics = {
-            "total_net_worth": 0,
-            "total_assets": 0,
-            "total_liabilities": 0,
-            "debt_to_asset_ratio": 0,
-            "credit_score": 0,
-            "epf_balance": 0,
-            "monthly_transactions": 0,
-            "asset_diversification": 0
+    def _enhance_risk_analysis_structure(self, ai_response: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhance AI response with required structure for risk analysis"""
+        enhanced = {
+            "agent_id": self.agent_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "analysis_type": "ai_powered_risk_assessment",
+            **ai_response
         }
         
-        try:
-            # Extract from data sources
-            data_sources = financial_data.get("data_sources", [])
-            
-            for source in data_sources:
-                if not source.get("success", False):
-                    continue
-                
-                source_type = source.get("type", "")
-                
-                # Process net worth data
-                if source_type == "net_worth" and "data" in financial_data:
-                    net_worth_data = financial_data["data"]
-                    metrics["total_net_worth"] = net_worth_data.get("total_net_worth", 0)
-                    metrics["total_assets"] = net_worth_data.get("total_assets", 0)
-                    metrics["total_liabilities"] = net_worth_data.get("total_liabilities", 0)
-                    
-                    # Calculate debt-to-asset ratio
-                    if metrics["total_assets"] > 0:
-                        metrics["debt_to_asset_ratio"] = metrics["total_liabilities"] / metrics["total_assets"]
-                
-                # Process credit report
-                elif source_type == "credit_report" and "data" in financial_data:
-                    credit_data = financial_data["data"]
-                    metrics["credit_score"] = credit_data.get("credit_score", 0)
-                
-                # Process EPF data
-                elif source_type == "epf_details" and "data" in financial_data:
-                    epf_data = financial_data["data"]
-                    metrics["epf_balance"] = epf_data.get("epf_balance", 0)
-                
-                # Process transaction data
-                elif source_type == "bank_transactions" and "data" in financial_data:
-                    txn_data = financial_data["data"]
-                    metrics["monthly_transactions"] = txn_data.get("transaction_count", 0)
-            
-            # Calculate asset diversification (simple heuristic)
-            if metrics["total_assets"] > 0:
-                # Simplified diversification score based on multiple asset types
-                asset_types = ["epf_balance", "total_net_worth"]
-                non_zero_assets = sum(1 for asset in asset_types if metrics.get(asset, 0) > 0)
-                metrics["asset_diversification"] = non_zero_assets / len(asset_types)
-            
-        except Exception as e:
-            logger.error(f"Error extracting financial metrics: {e}")
+        # Ensure required fields exist with defaults
+        if "overall_risk_level" not in enhanced:
+            enhanced["overall_risk_level"] = enhanced.get("risk_level", "medium")
         
-        return metrics
-    
-    async def _analyze_market_risk(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze market risk exposure"""
-        try:
-            market_risk = {
-                "risk_level": "medium",
-                "risk_score": 0.5,
-                "key_factors": [],
-                "recommendations": []
-            }
-            
-            # Assess based on asset concentration and diversification
-            diversification = metrics.get("asset_diversification", 0)
-            
-            if diversification < 0.3:
-                market_risk["risk_level"] = "high"
-                market_risk["risk_score"] = 0.8
-                market_risk["key_factors"].append("Low asset diversification")
-                market_risk["recommendations"].append("Diversify across more asset classes")
-            elif diversification < 0.6:
-                market_risk["risk_level"] = "medium"
-                market_risk["risk_score"] = 0.5
-                market_risk["key_factors"].append("Moderate asset diversification")
-            else:
-                market_risk["risk_level"] = "low"
-                market_risk["risk_score"] = 0.3
-                market_risk["key_factors"].append("Good asset diversification")
-            
-            return market_risk
-            
-        except Exception as e:
-            logger.error(f"Error in market risk analysis: {e}")
-            return {"risk_level": "unknown", "risk_score": 0.5, "error": str(e)}
-    
-    async def _analyze_credit_risk(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze credit risk based on credit score and debt levels"""
-        try:
-            credit_risk = {
-                "risk_level": "medium",
-                "risk_score": 0.5,
-                "key_factors": [],
-                "recommendations": []
-            }
-            
-            credit_score = metrics.get("credit_score", 0)
-            debt_ratio = metrics.get("debt_to_asset_ratio", 0)
-            
-            # Assess credit score risk
-            if credit_score > 0:
-                if credit_score >= 750:
-                    credit_risk["risk_level"] = "low"
-                    credit_risk["risk_score"] = 0.2
-                    credit_risk["key_factors"].append(f"Excellent credit score: {credit_score}")
-                elif credit_score >= 700:
-                    credit_risk["risk_level"] = "medium"
-                    credit_risk["risk_score"] = 0.4
-                    credit_risk["key_factors"].append(f"Good credit score: {credit_score}")
-                else:
-                    credit_risk["risk_level"] = "high"
-                    credit_risk["risk_score"] = 0.7
-                    credit_risk["key_factors"].append(f"Below-average credit score: {credit_score}")
-                    credit_risk["recommendations"].append("Work to improve credit score")
-            
-            # Assess debt-to-asset ratio
-            if debt_ratio > 0.5:
-                credit_risk["risk_level"] = "high"
-                credit_risk["risk_score"] = max(credit_risk["risk_score"], 0.8)
-                credit_risk["key_factors"].append(f"High debt-to-asset ratio: {debt_ratio:.1%}")
-                credit_risk["recommendations"].append("Consider debt reduction strategies")
-            elif debt_ratio > 0.3:
-                credit_risk["risk_score"] = max(credit_risk["risk_score"], 0.5)
-                credit_risk["key_factors"].append(f"Moderate debt levels: {debt_ratio:.1%}")
-            
-            return credit_risk
-            
-        except Exception as e:
-            logger.error(f"Error in credit risk analysis: {e}")
-            return {"risk_level": "unknown", "risk_score": 0.5, "error": str(e)}
-    
-    async def _analyze_liquidity_risk(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze liquidity risk based on cash flow and asset liquidity"""
-        try:
-            liquidity_risk = {
-                "risk_level": "medium",
-                "risk_score": 0.5,
-                "key_factors": [],
-                "recommendations": []
-            }
-            
-            # Simple liquidity assessment based on available metrics
-            monthly_transactions = metrics.get("monthly_transactions", 0)
-            
-            if monthly_transactions > 50:
-                liquidity_risk["key_factors"].append("High transaction activity suggests good liquidity")
-                liquidity_risk["risk_level"] = "low"
-                liquidity_risk["risk_score"] = 0.3
-            elif monthly_transactions > 20:
-                liquidity_risk["key_factors"].append("Moderate transaction activity")
-            else:
-                liquidity_risk["key_factors"].append("Low transaction activity may indicate liquidity constraints")
-                liquidity_risk["risk_level"] = "medium"
-                liquidity_risk["risk_score"] = 0.6
-                liquidity_risk["recommendations"].append("Ensure adequate emergency fund")
-            
-            return liquidity_risk
-            
-        except Exception as e:
-            logger.error(f"Error in liquidity risk analysis: {e}")
-            return {"risk_level": "unknown", "risk_score": 0.5, "error": str(e)}
-    
-    async def _analyze_concentration_risk(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze concentration risk in asset allocation"""
-        try:
-            concentration_risk = {
-                "risk_level": "medium",
-                "risk_score": 0.5,
-                "key_factors": [],
-                "recommendations": []
-            }
-            
-            diversification = metrics.get("asset_diversification", 0)
-            
-            if diversification < 0.3:
-                concentration_risk["risk_level"] = "high"
-                concentration_risk["risk_score"] = 0.8
-                concentration_risk["key_factors"].append("High concentration in few asset types")
-                concentration_risk["recommendations"].append("Diversify across more asset classes")
-            elif diversification < 0.6:
-                concentration_risk["risk_level"] = "medium"
-                concentration_risk["risk_score"] = 0.5
-                concentration_risk["key_factors"].append("Moderate asset concentration")
-            else:
-                concentration_risk["risk_level"] = "low"
-                concentration_risk["risk_score"] = 0.3
-                concentration_risk["key_factors"].append("Well-diversified portfolio")
-            
-            return concentration_risk
-            
-        except Exception as e:
-            logger.error(f"Error in concentration risk analysis: {e}")
-            return {"risk_level": "unknown", "risk_score": 0.5, "error": str(e)}
-    
-    def _calculate_overall_risk_score(self, risk_categories: Dict[str, Any]) -> float:
-        """Calculate weighted overall risk score"""
-        try:
-            weights = {
-                "market_risk": 0.3,
-                "credit_risk": 0.3,
-                "liquidity_risk": 0.2,
-                "concentration_risk": 0.2
-            }
-            
-            total_score = 0.0
-            total_weight = 0.0
-            
-            for category, weight in weights.items():
-                if category in risk_categories and "risk_score" in risk_categories[category]:
-                    total_score += risk_categories[category]["risk_score"] * weight
-                    total_weight += weight
-            
-            return total_score / total_weight if total_weight > 0 else 0.5
-            
-        except Exception:
-            return 0.5
-    
-    def _determine_risk_level(self, risk_score: float) -> str:
-        """Determine risk level from numeric score"""
-        if risk_score >= 0.7:
-            return "high"
-        elif risk_score >= 0.4:
-            return "medium"
-        else:
-            return "low"
-    
-    def _identify_key_risks(self, risk_categories: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Identify the most significant risks"""
-        key_risks = []
+        if "risk_score" not in enhanced:
+            enhanced["risk_score"] = enhanced.get("overall_risk_score", 0.5)
         
-        for category, analysis in risk_categories.items():
-            if analysis.get("risk_level") == "high" or analysis.get("risk_score", 0) >= 0.7:
-                key_risks.append({
-                    "category": category,
-                    "level": analysis.get("risk_level", "unknown"),
-                    "score": analysis.get("risk_score", 0),
-                    "factors": analysis.get("key_factors", [])
-                })
-        
-        # Sort by risk score descending
-        key_risks.sort(key=lambda x: x.get("score", 0), reverse=True)
-        return key_risks[:5]  # Top 5 risks
-    
-    def _generate_mitigation_strategies(self, key_risks: List[Dict[str, Any]], 
-                                      metrics: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Generate specific mitigation strategies for identified risks"""
-        strategies = []
-        
-        for risk in key_risks:
-            category = risk["category"]
-            
-            if category == "credit_risk":
-                strategies.append({
-                    "risk_category": category,
-                    "strategy": "Credit Score Improvement",
-                    "actions": [
-                        "Pay all bills on time",
-                        "Reduce credit utilization below 30%",
-                        "Avoid opening new credit accounts",
-                        "Monitor credit report regularly"
-                    ],
-                    "timeline": "6-12 months",
-                    "priority": "high"
-                })
-            
-            elif category == "concentration_risk":
-                strategies.append({
-                    "risk_category": category,
-                    "strategy": "Portfolio Diversification",
-                    "actions": [
-                        "Invest in different asset classes",
-                        "Consider international exposure",
-                        "Balance between equity and fixed income",
-                        "Implement systematic rebalancing"
-                    ],
-                    "timeline": "3-6 months",
-                    "priority": "medium"
-                })
-            
-            elif category == "liquidity_risk":
-                strategies.append({
-                    "risk_category": category,
-                    "strategy": "Liquidity Enhancement",
-                    "actions": [
-                        "Build emergency fund (6 months expenses)",
-                        "Keep some investments in liquid assets",
-                        "Establish credit lines for emergencies",
-                        "Review and optimize cash flow"
-                    ],
-                    "timeline": "1-3 months",
-                    "priority": "high"
-                })
-        
-        return strategies
-    
-    def _setup_monitoring_alerts(self, risk_categories: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Set up monitoring alerts for key risk metrics"""
-        alerts = []
-        
-        for category, analysis in risk_categories.items():
-            if analysis.get("risk_score", 0) >= 0.5:
-                alerts.append({
-                    "category": category,
-                    "metric": f"{category}_score",
-                    "current_value": analysis.get("risk_score", 0),
-                    "threshold": 0.7,
-                    "frequency": "weekly",
-                    "action": f"Review {category} factors and implement mitigation strategies"
-                })
-        
-        return alerts
-    
-    def _get_default_stress_scenarios(self) -> List[Dict[str, Any]]:
-        """Get default stress testing scenarios"""
-        return [
-            {
-                "name": "Market Crash",
-                "description": "30% market decline",
-                "equity_impact": -0.30,
-                "probability": 0.05
-            },
-            {
-                "name": "Economic Recession",
-                "description": "Mild recession scenario",
-                "equity_impact": -0.15,
-                "income_impact": -0.10,
-                "probability": 0.15
-            },
-            {
-                "name": "Interest Rate Shock",
-                "description": "Rapid interest rate increase",
-                "bond_impact": -0.10,
-                "equity_impact": -0.05,
-                "probability": 0.20
+        if "risk_categories" not in enhanced:
+            enhanced["risk_categories"] = {
+                "market_risk": enhanced.get("market_risk", {}),
+                "credit_risk": enhanced.get("credit_risk", {}),
+                "liquidity_risk": enhanced.get("liquidity_risk", {}),
+                "concentration_risk": enhanced.get("concentration_risk", {})
             }
-        ]
+        
+        if "key_risks" not in enhanced:
+            enhanced["key_risks"] = enhanced.get("key_risk_factors", [])
+        
+        if "mitigation_strategies" not in enhanced:
+            enhanced["mitigation_strategies"] = enhanced.get("recommendations", [])
+        
+        return enhanced
     
-    async def _run_stress_scenario(self, metrics: Dict[str, Any], 
-                                  scenario: Dict[str, Any]) -> Dict[str, Any]:
-        """Run a single stress test scenario"""
-        try:
-            base_value = metrics.get("total_net_worth", 0)
-            
-            # Apply scenario impacts
-            equity_impact = scenario.get("equity_impact", 0)
-            bond_impact = scenario.get("bond_impact", 0)
-            income_impact = scenario.get("income_impact", 0)
-            
-            # Simplified calculation assuming 70% equity, 30% bonds
-            portfolio_impact = (0.7 * equity_impact + 0.3 * bond_impact) * base_value
-            
-            return {
-                "scenario_name": scenario.get("name", "Unknown"),
-                "description": scenario.get("description", ""),
-                "portfolio_impact": portfolio_impact,
-                "impact_percentage": portfolio_impact / base_value if base_value > 0 else 0,
-                "probability": scenario.get("probability", 0),
-                "expected_loss": portfolio_impact * scenario.get("probability", 0)
-            }
-            
-        except Exception as e:
-            return {
-                "scenario_name": scenario.get("name", "Unknown"),
-                "error": str(e),
-                "portfolio_impact": 0
-            }
-    
-    def _assess_risk_tolerance(self, max_loss_percentage: float) -> str:
-        """Assess risk tolerance based on maximum loss scenarios"""
-        if max_loss_percentage > 0.3:
-            return "low"
-        elif max_loss_percentage > 0.15:
-            return "moderate"
-        else:
-            return "high"
-    
-    def _get_risk_thresholds(self) -> Dict[str, Dict[str, Any]]:
-        """Get risk monitoring thresholds"""
-        return {
-            "debt_to_asset_ratio": {
-                "threshold": 0.5,
-                "operator": "greater",
-                "severity": "high",
-                "message": "Debt-to-asset ratio exceeds 50%",
-                "action": "Consider debt reduction strategies"
-            },
-            "credit_score": {
-                "threshold": 650,
-                "operator": "less",
-                "severity": "medium",
-                "message": "Credit score below 650",
-                "action": "Focus on credit improvement"
-            },
-            "asset_diversification": {
-                "threshold": 0.3,
-                "operator": "less",
-                "severity": "medium",
-                "message": "Low portfolio diversification",
-                "action": "Increase asset diversification"
-            }
+    def _enhance_stress_test_structure(self, ai_response: Dict[str, Any], scenarios: List[Dict]) -> Dict[str, Any]:
+        """Enhance AI response structure for stress test results"""
+        enhanced = {
+            "agent_id": self.agent_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "analysis_type": "ai_powered_stress_testing",
+            "scenarios_tested": len(scenarios),
+            **ai_response
         }
-    
-    def _check_threshold_breach(self, current_value: float, threshold: float, 
-                               operator: str) -> bool:
-        """Check if a threshold has been breached"""
-        if operator == "greater":
-            return current_value > threshold
-        elif operator == "less":
-            return current_value < threshold
-        elif operator == "between":
-            # threshold should be a tuple for between
-            if isinstance(threshold, (list, tuple)) and len(threshold) == 2:
-                return not (threshold[0] <= current_value <= threshold[1])
-        return False
-    
-    def _generate_monitoring_recommendations(self, alerts: List[Dict[str, Any]]) -> List[str]:
-        """Generate recommendations based on triggered alerts"""
-        recommendations = []
         
-        high_severity_alerts = [a for a in alerts if a.get("severity") == "high"]
-        medium_severity_alerts = [a for a in alerts if a.get("severity") == "medium"]
+        # Ensure required fields
+        if "worst_case_loss" not in enhanced:
+            enhanced["worst_case_loss"] = enhanced.get("maximum_loss", 0.0)
         
-        if high_severity_alerts:
-            recommendations.append("Address high-severity risk alerts immediately")
-            
-        if len(alerts) > 3:
-            recommendations.append("Multiple risk thresholds breached - comprehensive review needed")
-            
-        if medium_severity_alerts:
-            recommendations.append("Monitor medium-severity alerts and plan corrective actions")
-            
-        return recommendations
+        if "best_case_gain" not in enhanced:
+            enhanced["best_case_gain"] = enhanced.get("maximum_gain", 0.0)
+        
+        if "scenario_results" not in enhanced:
+            enhanced["scenario_results"] = enhanced.get("scenario_analysis", [])
+        
+        if "risk_tolerance_assessment" not in enhanced:
+            enhanced["risk_tolerance_assessment"] = enhanced.get("risk_tolerance", "medium")
+        
+        return enhanced
+    
+    def _enhance_monitoring_structure(self, ai_response: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhance AI response structure for monitoring results"""
+        enhanced = {
+            "agent_id": self.agent_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "analysis_type": "ai_powered_risk_monitoring",
+            **ai_response
+        }
+        
+        # Ensure required fields
+        if "alerts_triggered" not in enhanced:
+            enhanced["alerts_triggered"] = len(enhanced.get("alerts", []))
+        
+        if "monitoring_status" not in enhanced:
+            enhanced["monitoring_status"] = "active"
+        
+        if "risk_trend" not in enhanced:
+            enhanced["risk_trend"] = enhanced.get("trend_analysis", "stable")
+        
+        return enhanced
 
-# Global agent instance
+# Create global instance
 risk_assessment_agent = RiskAssessmentAgent() 
