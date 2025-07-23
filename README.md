@@ -1,292 +1,290 @@
-# 🤖 Agentic AI Financial Insights System
+# 🤖 Financial Multi-Agent System with Google Cloud ADK
 
-A comprehensive financial analysis system that integrates with **Fi MCP (Model Context Protocol)** to collect real financial data and generate AI-powered insights using Google Gemini AI with advanced prompt engineering.
+A sophisticated financial intelligence system powered by **Google Cloud Agent Development Kit (ADK)** featuring multiple specialized AI agents working together to provide comprehensive financial analysis.
 
-## 🌟 Key Features
+## 🎯 Overview
 
-### 💰 Real Financial Data Integration
-- **Fi MCP Server Integration**: Connects to real financial data sources
-- **Net Worth Analysis**: Complete asset and liability breakdown
-- **Bank Transactions**: Transaction history and spending patterns
-- **EPF Details**: Employee Provident Fund balance and insights
-- **Credit Reports**: Credit score monitoring and improvement tips
+This project transforms a traditional financial analysis system into a **multi-agent architecture** using Google Cloud ADK, where specialized agents collaborate to deliver superior financial insights.
 
-### 🧠 Enhanced AI Analysis
-- **Advanced AI Agent**: Institutional-grade financial analysis using enhanced prompt engineering
-- **Google Gemini 2.0**: Latest AI model for sophisticated financial insights
-- **Chain-of-Thought Reasoning**: Transparent, logical financial analysis
-- **Risk Assessment**: Comprehensive portfolio risk evaluation
-- **Opportunity Identification**: Investment and financial opportunities
+### 🏗️ Multi-Agent Architecture
 
-### 📊 Data-Specific Dashboard
-- **Net Worth Panel**: Asset/liability visualization and breakdown
-- **Bank Transactions Panel**: Transaction analysis and spending insights
-- **EPF Panel**: Provident fund tracking and projections
-- **Credit Report Panel**: Credit score monitoring with improvement tips
-- **AI Insights Panel**: Generated financial recommendations and analysis
-
-## 🏗️ System Architecture
-
-```
-Fi MCP Server (Go) → Real Data Collector (Python) → Enhanced AI Agent (LangChain + Gemini) → Insights Dashboard (Streamlit)
-                                     ↓
-                            SQLite Database (Financial Data + AI Insights)
+```mermaid
+graph TD
+    A[User Request] --> B[ADK Orchestrator]
+    B --> C[Financial Data Collector Agent]
+    B --> D[Risk Assessment Agent]
+    B --> E[Market Analysis Agent]
+    C --> F[Fi MCP Server]
+    D --> G[Risk Analysis Engine]
+    E --> H[Market Intelligence Engine]
+    B --> I[Insight Synthesis]
+    I --> J[Dashboard/Chat Interface]
 ```
 
-## 🚀 Quick Start
+### 🤖 Specialized Agents
+
+1. **🔍 Financial Data Collector Agent**
+   - Real-time data collection from Fi MCP server
+   - Data quality assessment and validation
+   - Multi-source financial data integration
+
+2. **⚖️ Risk Assessment Agent**
+   - Portfolio risk analysis and stress testing
+   - Advanced risk metrics calculation
+   - Scenario analysis and mitigation strategies
+
+3. **📈 Market Analysis Agent**
+   - Technical and fundamental market analysis
+   - Market regime identification
+   - Investment opportunity discovery
+
+4. **🎯 ADK Orchestrator Agent**
+   - Multi-agent workflow coordination
+   - Cross-agent insight synthesis
+   - System health monitoring
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
 
-- **Python 3.9+**
-- **Go 1.23+** (for Fi MCP server)
-- **Google Gemini API Key**
+1. **Google Cloud Project** with billing enabled
+2. **Python 3.9+** installed
+3. **Fi MCP Server** running on port 8080
+4. **Google API Key** or Vertex AI access
 
-### 1. Setup Fi MCP Server
+### Installation
 
+1. **Clone and setup:**
 ```bash
-# Clone and setup Fi MCP server
-mkdir fi-mcp-server && cd fi-mcp-server
-git clone https://github.com/epiFi/fi-mcp-dev.git .
-go mod tidy
-
-# Start Fi MCP server
-FI_MCP_PORT=8080 go run . &
-cd ..
+git clone <repository-url>
+cd Google-AgenticAI-Hackathon
+git checkout feature/adk-multiagent-system
 ```
 
-### 2. Setup Python Environment
-
+2. **Install dependencies:**
 ```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
-
+3. **Configure environment:**
 ```bash
-# Setup environment variables
+# Copy and edit environment file
 cp .env.example .env
 
-# Edit .env file:
-GOOGLE_API_KEY=your_gemini_api_key_here
-DATABASE_URL=sqlite:///./agentic_ai.db
-MCP_SERVER_URL=http://localhost:8080
-LOG_LEVEL=INFO
-COLLECTION_INTERVAL_MINUTES=5
-INSIGHTS_GENERATION_INTERVAL_MINUTES=15
+# Required settings:
+GOOGLE_GENAI_USE_VERTEXAI=1
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_API_KEY=your-google-api-key
 ```
 
-### 4. Run the System
+4. **Start Fi MCP Server:**
+```bash
+cd fi-mcp-server
+FI_MCP_PORT=8080 go run .
+```
+
+### Running the Multi-Agent System
+
+#### Option 1: ADK Command Line (Recommended)
+```bash
+# Using ADK framework (requires ADK installation)
+adk run financial_assistant
+```
+
+#### Option 2: Direct Python Execution
+```bash
+# Run the main ADK application
+python main_adk.py
+```
+
+#### Option 3: Streamlit Dashboard with ADK Integration
+```bash
+# Launch enhanced dashboard with multi-agent support
+streamlit run dashboard/app.py
+```
+
+## 💬 Interacting with the System
+
+### Chat Interface
+
+The financial assistant supports natural language interactions:
+
+```
+You: "Analyze my portfolio comprehensively"
+Assistant: 🎯 **Comprehensive Financial Analysis Complete** ⏱️ 12.3s
+📊 **Key Findings:**
+• Data Quality: Excellent financial data collected (Confidence: 95%)
+• Risk Assessment: Medium risk portfolio with good diversification (Confidence: 87%)
+• Market Analysis: Risk-on market regime with upward trend (Confidence: 78%)
+...
+```
+
+### Available Commands
+
+- **"Comprehensive analysis"** - Full multi-agent financial analysis
+- **"Risk assessment"** - Detailed portfolio risk evaluation
+- **"Market analysis"** - Current market trends and outlook
+- **"Investment opportunities"** - Identify potential investments
+- **"Stress test"** - Portfolio stress testing scenarios
+- **"System status"** - Check multi-agent system health
+- **"Help"** - Show all available capabilities
+
+## 🔧 Advanced Configuration
+
+### Google Cloud Setup
+
+1. **Enable required APIs:**
+```bash
+gcloud services enable aiplatform.googleapis.com
+```
+
+2. **Set up authentication:**
+```bash
+gcloud auth application-default login
+```
+
+3. **Configure project:**
+```bash
+gcloud config set project YOUR_PROJECT_ID
+```
+
+### ADK Configuration
+
+Edit `adk_agents/agent_config.py` to customize:
+- Model parameters (temperature, max tokens)
+- Agent specializations
+- System prompts and behaviors
+
+### Multi-Agent Orchestration
+
+The orchestrator supports different workflow patterns:
+
+```python
+# Sequential analysis
+result = await orchestrator.execute_comprehensive_analysis()
+
+# Targeted analysis
+result = await orchestrator.execute_targeted_analysis("risk_assessment")
+
+# Parallel agent execution
+results = await orchestrator.execute_parallel_analysis(data)
+```
+
+## 📊 Dashboard Integration
+
+The enhanced Streamlit dashboard now includes:
+
+### 🤖 ADK System Status
+- Real-time agent health monitoring
+- System performance metrics
+- Multi-agent coordination status
+
+### 💬 Intelligent Chat Interface
+- Powered by ADK multi-agent system
+- Context-aware financial conversations
+- Real-time data analysis integration
+
+### 📈 Advanced Analytics
+- Multi-agent analysis workflows
+- Cross-agent insight synthesis
+- Enhanced visualization and reporting
+
+## 🏛️ Architecture Details
+
+### Agent Communication
+
+```python
+# Orchestrator coordinates agent workflows
+workflow = {
+    "phase_1": "data_collection",      # Financial Data Collector
+    "phase_2": "parallel_analysis",    # Risk + Market agents in parallel
+    "phase_3": "synthesis",            # Cross-agent insight generation
+    "phase_4": "recommendations"       # Final actionable guidance
+}
+```
+
+### Data Flow
+
+1. **Collection Phase**: Financial Data Collector gathers real-time data
+2. **Analysis Phase**: Risk and Market agents analyze in parallel
+3. **Synthesis Phase**: Orchestrator combines insights across agents
+4. **Presentation Phase**: Results formatted for user consumption
+
+### Error Handling
+
+- **Agent-level**: Individual agent error recovery
+- **Orchestrator-level**: Workflow resilience and fallback strategies
+- **System-level**: Health monitoring and automatic recovery
+
+## 🔍 Monitoring and Debugging
+
+### System Health Checks
 
 ```bash
-# Test Fi MCP connection
-python3 main.py test
-
-# Start data collection and AI analysis
-python3 main.py start
-
-# Launch dashboard
-python3 main.py dashboard
+# Check ADK system status
+python -c "
+import asyncio
+from adk_agents import adk_orchestrator
+result = asyncio.run(adk_orchestrator.get_system_status())
+print(result)
+"
 ```
 
-## 📋 Available Commands
+### Agent Performance Metrics
 
-```bash
-# System operations
-python3 main.py start          # Start data collection and AI analysis
-python3 main.py status         # Check system status
-python3 main.py collect        # Collect data immediately
-python3 main.py generate       # Generate insights immediately
-python3 main.py test           # Test Fi MCP server connection
-python3 main.py dashboard      # Launch Streamlit dashboard
+- **Data Collection**: Quality scores and collection success rates
+- **Risk Analysis**: Confidence levels and calculation accuracy
+- **Market Analysis**: Prediction accuracy and trend identification
+- **Orchestration**: Workflow completion rates and execution times
 
-# Options
---no-collector                 # Start without data collector
---no-generator                 # Start without insight generator
-```
+### Logs and Debugging
 
-## 💾 Database Schema
+- **Agent logs**: Individual agent execution details
+- **Orchestrator logs**: Multi-agent coordination events
+- **System logs**: Overall system health and performance
 
-### MCP Data Table
-- **Real Financial Data**: Net worth, transactions, EPF, credit reports
-- **Timestamps**: Data collection timeline
-- **Processing Status**: Track AI analysis progress
+## 🛠️ Development and Customization
 
-### AI Insights Table
-- **Enhanced Insights**: Institutional-grade financial analysis
-- **Confidence Scores**: AI certainty in recommendations
-- **Metadata**: Key factors, recommendations, reasoning chains
+### Adding New Agents
 
-## 🎯 Dashboard Features
+1. **Create agent class** in `adk_agents/`
+2. **Register with orchestrator** in `adk_orchestrator.py`
+3. **Update configuration** in `agent_config.py`
+4. **Add dashboard integration** in `dashboard/adk_integration.py`
 
-### 📈 Overview Panel
-- Financial summary metrics (Net Worth, Credit Score, EPF Balance)
-- Data collection status
-- Recent AI insights preview
+### Extending Capabilities
 
-### 💰 Net Worth Panel
-- Total net worth calculation
-- Asset distribution pie charts
-- Liability breakdown
-- Investment portfolio visualization
+The system is designed for extensibility:
+- **New data sources**: Add collectors for additional financial APIs
+- **Enhanced analysis**: Implement specialized analysis agents
+- **Custom workflows**: Design domain-specific orchestration patterns
 
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   MCP Server    │───▶│  Data Collector  │───▶│   Database      │
-│   (Fi MCP)      │    │  Service         │    │   (MCP Data)    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                                        │
-                                                        ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Dashboard     │◀───│   AI Agent       │◀───│   Unprocessed   │
-│   (Streamlit)   │    │   (LangChain +   │    │   Data          │
-└─────────────────┘    │    Gemini)       │    └─────────────────┘
-        ▲              └──────────────────┘
-        │                       │
-        │                       ▼
-        │              ┌─────────────────┐
-        └──────────────│   Database      │
-                       │   (AI Insights) │
-                       └─────────────────┘
-```
+## 📚 Resources
 
-## 📁 Project Structure
+### Google Cloud ADK
+- [ADK Foundation Tutorial](https://codelabs.developers.google.com/devsite/codelabs/build-agents-with-adk-foundation)
+- [Multi-Agent Systems Guide](https://github.com/iamthuya/google-cloud-workshops/blob/main/ai-agents/agent-development-kit/orchestrating_multi_agent_systems.ipynb)
+- [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
 
-```
-├── main.py                    # Main entry point
-├── config.py                  # Configuration management
-├── requirements.txt           # Python dependencies
-├── .env.example              # Environment variables template
-├── models/
-│   └── database.py           # SQLAlchemy models
-├── services/
-│   ├── mcp_mock.py          # Mock MCP data generator
-│   ├── data_collector.py    # Data collection service
-│   ├── ai_agent.py          # LangChain AI agent
-│   └── insight_generator.py # Insight generation orchestrator
-└── dashboard/
-    └── app.py               # Streamlit dashboard
-```
-
-## 🔧 Configuration
-
-Key configuration options in `.env`:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GOOGLE_API_KEY` | Gemini AI API key | Required |
-| `DATABASE_URL` | SQLite database path | `sqlite:///./agentic_ai.db` |
-| `COLLECTION_INTERVAL_MINUTES` | Data collection frequency | `5` |
-| `INSIGHTS_GENERATION_INTERVAL_MINUTES` | AI analysis frequency | `15` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-
-## 🧠 AI Insights Types
-
-The system generates four types of AI insights:
-
-1. **Trend Analysis** - Market trends and patterns
-2. **Risk Assessment** - Risk factors and mitigation strategies  
-3. **Opportunity Identification** - Investment opportunities
-4. **Market Sentiment** - Overall market sentiment analysis
-
-## 📊 Dashboard Features
-
-### Overview Tab
-- System metrics and KPIs
-- Insights distribution by type
-- Confidence score analytics
-
-### AI Insights Tab
-- Recent insights with confidence scores
-- Key factors and recommendations
-- Expandable insight details
-
-### Data Analysis Tab
-- Raw data visualization
-- Collection timeline
-- Stock price trends (when available)
-
-### System Status Tab
-- Database statistics
-- System configuration
-- Manual control buttons
-- Data export functionality
-
-## 🔌 MCP Server Integration
-
-Currently using mock data. To connect to a real Fi MCP server:
-
-1. Update `MCP_SERVER_URL` in `.env`
-2. Modify `services/data_collector.py` to use actual MCP client
-3. Replace mock data calls with real MCP API calls
-
-## 🛡️ Error Handling
-
-- Graceful database error handling
-- AI generation fallbacks
-- Service restart capabilities
-- Comprehensive logging
-
-## 📈 Monitoring
-
-Check logs in `agentic_ai.log` or use:
-
-```bash
-tail -f agentic_ai.log
-```
-
-## 🔄 Development
-
-### Adding New Data Types
-1. Extend `MockMCPService` in `services/mcp_mock.py`
-2. Update AI prompts in `services/ai_agent.py`
-3. Add visualization in `dashboard/app.py`
-
-### Customizing AI Analysis
-- Modify prompts in `AIInsightAgent` class
-- Adjust batch sizes and intervals
-- Add new insight types
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Missing Google API Key**
-   ```
-   Error: Google API key is required
-   ```
-   Solution: Set `GOOGLE_API_KEY` in `.env`
-
-2. **Database Connection Issues**
-   ```
-   Error: no such table
-   ```
-   Solution: Run `python main.py status` to initialize
-
-3. **Port Already in Use (Dashboard)**
-   ```
-   Error: Port 8501 is already in use
-   ```
-   Solution: Kill existing Streamlit processes or use different port
+### Financial Intelligence
+- Real-time financial data via Fi MCP integration
+- Advanced risk management and portfolio optimization
+- Market analysis and investment opportunity identification
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+1. **Fork the repository**
+2. **Create feature branch**: `git checkout -b feature/new-agent`
+3. **Develop and test**: Add new agents or enhance existing ones
+4. **Submit pull request**: Include documentation and test coverage
 
-## 📄 License
+## 📞 Support
 
-This project is licensed under the MIT License.
+- **System Issues**: Check agent health status and logs
+- **Configuration**: Review environment variables and Google Cloud setup
+- **Feature Requests**: Open GitHub issues with detailed requirements
 
-## 🙏 Acknowledgments
+---
 
-- Google Gemini AI for powerful language understanding
-- LangChain for AI agent framework
-- Streamlit for rapid dashboard development
-- SQLAlchemy for robust database ORM 
+**🎉 Experience the future of financial intelligence with multi-agent AI systems powered by Google Cloud ADK!** 
