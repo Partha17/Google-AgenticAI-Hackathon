@@ -2,6 +2,23 @@
 
 A comprehensive financial analysis system that integrates with **Fi MCP (Model Context Protocol)** to collect real financial data and generate AI-powered insights using Google Gemini AI with advanced prompt engineering.
 
+## ⚡ Quick Start (One-Command Setup)
+
+**For returning users - just run this:**
+```bash
+./start_system.sh
+```
+
+**To stop everything:**
+```bash
+./stop_system.sh
+```
+
+**Access your dashboard:** http://localhost:8501 or http://localhost:8502  
+**Test login numbers:** 2222222222, 3333333333, 1111111111, 7777777777
+
+---
+
 ## 🌟 Key Features
 
 ### 💰 Real Financial Data Integration
