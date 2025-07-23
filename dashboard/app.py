@@ -730,7 +730,6 @@ class ModernFinancialDashboard:
         
         with col3:
             if st.button("📊 Check Quota", type="secondary"):
-                from services.quota_manager import quota_manager
                 stats = quota_manager.get_usage_stats()
                 quota_status = stats["quota_status"]
                 
