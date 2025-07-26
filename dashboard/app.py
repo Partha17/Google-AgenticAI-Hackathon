@@ -90,6 +90,8 @@ st.markdown("""
 
 class ModernFinancialDashboard:
     def __init__(self):
+        self.logger = get_dashboard_logger()
+        self.logger.info("Dashboard initialized")
         create_tables()
     
     def extract_financial_data(self, mcp_record) -> Dict[str, Any]:
