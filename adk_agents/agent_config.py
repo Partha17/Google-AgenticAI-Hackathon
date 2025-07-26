@@ -199,5 +199,54 @@ class ADKConfig:
             }
         }
 
+# Agent configurations for easy access
+AGENT_CONFIGS = {
+    "mcp_periodic_ai_agent": {
+        "name": "MCP Periodic AI Agent",
+        "description": "Automated data collection and AI analysis agent",
+        "model": "gemini-1.5-flash",
+        "generation_config": {
+            "temperature": 0.3,
+            "max_output_tokens": 2048,
+            "top_p": 0.8
+        },
+        "collection_interval_minutes": 60,
+        "analysis_triggers": {
+            "data_freshness_hours": 2,
+            "significant_change_threshold": 0.05
+        },
+        "safety_settings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}
+        ]
+    },
+    "financial_data_collector": {
+        "model": "gemini-1.5-flash",
+        "generation_config": {
+            "temperature": 0.3,
+            "max_output_tokens": 2048,
+            "top_p": 0.8
+        }
+    },
+    "risk_assessment_agent": {
+        "model": "gemini-1.5-flash",
+        "generation_config": {
+            "temperature": 0.3,
+            "max_output_tokens": 2048,
+            "top_p": 0.8
+        }
+    },
+    "market_analysis_agent": {
+        "model": "gemini-1.5-flash",
+        "generation_config": {
+            "temperature": 0.3,
+            "max_output_tokens": 2048,
+            "top_p": 0.8
+        }
+    }
+}
+
 # Global configuration instance
 adk_config = ADKConfig() 

@@ -1,0 +1,21 @@
+# Ignore development files
+.git/
+.gitignore
+*.md
+node_modules/
+venv/
+__pycache__/
+
+# Ignore documentation and non-essential files
+README.md
+DEPLOYMENT_GCLOUD_FUNCTIONS.md
+deploy.sh
+test-deployment.sh
+
+# Keep only necessary files
+!go.mod
+!go.sum
+!*.go
+!static/
+!test_data_dir/
+!.env.yaml 

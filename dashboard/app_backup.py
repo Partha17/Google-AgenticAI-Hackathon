@@ -221,7 +221,7 @@ class ModernFinancialDashboard:
             st.title("💰 Fi Financial AI Dashboard")
             st.markdown("**Real-time financial analysis powered by AI agents and Fi MCP data**")
         with col2:
-            if st.button("🔄 Refresh Data", type="primary", key="main_refresh_data"):
+            if st.button("🔄 Refresh Data", type="primary", key="refresh_data_main"):
                 st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -369,7 +369,7 @@ class ModernFinancialDashboard:
             quota_status = quota_manager.check_quota_available(3)  # Estimate 3 requests needed
             
             if quota_status["available"]:
-                if st.button("✨ Generate New Insights", type="primary", key="insights_generate_new"):
+                if st.button("✨ Generate New Insights", type="primary", key="generate_insights_main"):
                     with st.spinner("🤖 AI is analyzing your financial data..."):
                         try:
                             insight_generator.generate_insights(force=True)
@@ -382,7 +382,7 @@ class ModernFinancialDashboard:
                 st.caption(f"🔄 Quota: {quota_status['daily_used']}/{quota_status['daily_limit']} daily")
             else:
                 # Show quota restriction
-                st.button("⚠️ Quota Exceeded", disabled=True, type="secondary", key="insights_quota_exceeded")
+                st.button("⚠️ Quota Exceeded", disabled=True, type="secondary", key="quota_exceeded_main")
                 st.error(f"❌ **Quota Limit Reached**\n\n"
                         f"Daily: {quota_status['daily_used']}/{quota_status['daily_limit']}\n\n"
                         f"Hourly: {quota_status['hourly_used']}/{quota_status['hourly_limit']}\n\n"
@@ -398,7 +398,7 @@ class ModernFinancialDashboard:
             height=80
         )
         
-        if st.button("🤖 Get AI Answer", key="insights_ai_answer") and user_question:
+        if st.button("🤖 Get AI Answer", key="ai_answer_main") and user_question:
             with st.spinner("🤖 AI is analyzing your data..."):
                 try:
                     # Get financial context
@@ -901,7 +901,7 @@ class ModernFinancialDashboard:
         
         with col1:
             if not agent_status["running"]:
-                if st.button("▶️ Start Periodic Collection", type="primary", key="mcp_start_collection"):
+                if st.button("▶️ Start Periodic Collection", type="primary", key="start_collection_mcp"):
                     with st.spinner("Starting periodic collection..."):
                         try:
                             mcp_periodic_ai_agent.start_periodic_collection()
@@ -910,7 +910,7 @@ class ModernFinancialDashboard:
                             st.error(f"❌ Error starting collection: {e}")
                     st.rerun()
             else:
-                if st.button("⏹️ Stop Periodic Collection", type="secondary", key="mcp_stop_collection"):
+                if st.button("⏹️ Stop Periodic Collection", type="secondary", key="stop_collection_mcp"):
                     with st.spinner("Stopping periodic collection..."):
                         try:
                             mcp_periodic_ai_agent.stop_periodic_collection()
@@ -920,7 +920,7 @@ class ModernFinancialDashboard:
                     st.rerun()
         
         with col2:
-            if st.button("📥 Collect Data Now", type="primary", key="mcp_collect_data"):
+            if st.button("📥 Collect Data Now", type="primary", key="collect_data_mcp"):
                 with st.spinner("Collecting data from Fi MCP..."):
                     try:
                         result = mcp_periodic_ai_agent.collect_mcp_data()
@@ -938,7 +938,7 @@ class ModernFinancialDashboard:
             quota_check = quota_manager.check_quota_available(5)
             
             if quota_check["available"]:
-                if st.button("🧠 Run AI Analysis", type="primary", key="mcp_run_analysis"):
+                if st.button("🧠 Run AI Analysis", type="primary", key="run_analysis_mcp"):
                     with st.spinner("Running comprehensive AI analysis..."):
                         try:
                             result = mcp_periodic_ai_agent.generate_ai_analysis(force=True)
@@ -957,11 +957,11 @@ class ModernFinancialDashboard:
                             st.error(f"❌ Error: {e}")
                     st.rerun()
             else:
-                st.button("⚠️ AI Quota Exceeded", disabled=True, type="secondary", key="mcp_quota_exceeded")
+                st.button("⚠️ AI Quota Exceeded", disabled=True, type="secondary", key="quota_exceeded_mcp")
                 st.caption(f"Daily: {quota_check['daily_used']}/{quota_check['daily_limit']}")
         
         with col4:
-            if st.button("🔄 Refresh Status", type="secondary", key="mcp_refresh_status"):
+            if st.button("🔄 Refresh Status", type="secondary", key="refresh_status_mcp"):
                 st.rerun()
         
         # Configuration section
@@ -983,8 +983,8 @@ class ModernFinancialDashboard:
                     data_list.append({
                         "Timestamp": record.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                         "Data Type": record.data_type,
-                        "Phone": getattr(record, 'phone_number', 'N/A'),
-                        "Session": getattr(record, 'session_id', 'N/A')[:20] + "..." if getattr(record, 'session_id', 'N/A') and len(getattr(record, 'session_id', 'N/A')) > 20 else getattr(record, 'session_id', 'N/A')
+                        "Phone": record.phone_number,
+                        "Session": record.session_id[:20] + "..." if len(record.session_id) > 20 else record.session_id
                     })
                 
                 df = pd.DataFrame(data_list)
@@ -1045,7 +1045,7 @@ class ModernFinancialDashboard:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("📥 Collect Data Now", type="primary", key="system_collect_data"):
+            if st.button("📥 Collect Data Now", type="primary", key="collect_data_system"):
                 with st.spinner("Collecting real financial data..."):
                     real_data_collector.collect_data()
                 st.success("Data collection completed!")
@@ -1056,7 +1056,7 @@ class ModernFinancialDashboard:
             quota_check = quota_manager.check_quota_available(3)
             
             if quota_check["available"]:
-                if st.button("🧠 Generate Insights", type="primary", key="system_generate_insights"):
+                if st.button("🧠 Generate Insights", type="primary", key="generate_insights_system"):
                     with st.spinner("Generating AI insights..."):
                         try:
                             insight_generator.generate_insights(force=True)
@@ -1065,11 +1065,11 @@ class ModernFinancialDashboard:
                             st.error(f"❌ Error: {str(e)}")
                     st.rerun()
             else:
-                st.button("⚠️ Insights Quota Exceeded", disabled=True, type="secondary", key="system_quota_exceeded")
+                st.button("⚠️ Insights Quota Exceeded", disabled=True, type="secondary", key="quota_exceeded_system")
                 st.caption(f"Daily: {quota_check['daily_used']}/{quota_check['daily_limit']}")
         
         with col3:
-            if st.button("📊 Check Quota", type="secondary", key="system_check_quota"):
+            if st.button("📊 Check Quota", type="secondary", key="check_quota_system"):
                 stats = quota_manager.get_usage_stats()
                 quota_status = stats["quota_status"]
                 

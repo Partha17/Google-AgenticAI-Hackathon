@@ -14,6 +14,9 @@ from typing import Dict, List, Any, Optional
 # Import centralized logging
 from services.logger_config import setup_logging, get_adk_logger, log_startup, log_shutdown, log_error
 
+# Import MCP Agent Service
+from services.mcp_agent_service import mcp_agent_service
+
 # Setup centralized logging
 setup_logging()
 logger = get_adk_logger()
@@ -713,6 +716,14 @@ async def main():
             logger.info("✅ Financial Assistant Agent ready!")
             log_startup('ADK.Agent', 'Financial Assistant Agent initialized successfully')
             
+            # Start MCP Agent Service for periodic data collection and AI analysis
+            logger.info("🤖 Starting MCP Periodic AI Agent Service...")
+            if mcp_agent_service.start_agent_service(auto_start_collection=True):
+                logger.info("✅ MCP Agent Service started successfully")
+                log_startup('MCP.Agent', 'MCP Periodic AI Agent started')
+            else:
+                logger.warning("⚠️ MCP Agent Service failed to start")
+            
             # Keep the agent running
             while True:
                 try:
@@ -721,6 +732,12 @@ async def main():
                 except KeyboardInterrupt:
                     log_shutdown('ADK.Agent', 'Shutdown signal received')
                     logger.info("👋 Shutting down Financial Assistant Agent...")
+                    
+                    # Stop MCP Agent Service
+                    logger.info("🛑 Stopping MCP Agent Service...")
+                    mcp_agent_service.stop_agent_service()
+                    log_shutdown('MCP.Agent', 'MCP Agent Service stopped')
+                    
                     break
         else:
             logger.error("❌ Failed to initialize Financial Assistant Agent")

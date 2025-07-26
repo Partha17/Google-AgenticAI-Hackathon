@@ -1,0 +1,25 @@
+steps:
+  # Build the function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'fi-mcp-function'
+      - '--gen2'
+      - '--runtime=go123'
+      - '--region=${_REGION}'
+      - '--source=.'
+      - '--entry-point=FiMCPFunction'
+      - '--trigger=http'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--timeout=300s'
+      - '--max-instances=10'
+      - '--set-env-vars=FI_MCP_PORT=8080,LOG_LEVEL=info,ENVIRONMENT=production'
+
+substitutions:
+  _REGION: 'us-central1'
+
+options:
+  logging: CLOUD_LOGGING_ONLY 

@@ -15,6 +15,8 @@ class MCPData(Base):
     data_type = Column(String(100), nullable=False)
     raw_data = Column(Text, nullable=False)  # JSON string
     processed = Column(Boolean, default=False)
+    phone_number = Column(String(20), nullable=True)  # Phone number for Fi MCP authentication
+    session_id = Column(String(200), nullable=True)   # MCP session identifier
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def get_data(self):
@@ -37,7 +39,7 @@ class AIInsight(Base):
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
     confidence_score = Column(Float, default=0.0)
-    data_source_ids = Column(Text)  # JSON array of MCP data IDs used
+    data_sources = Column(Text)  # JSON array of data source types used
     insight_metadata = Column(Text)  # Additional JSON metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -52,16 +54,16 @@ class AIInsight(Base):
         """Set metadata as JSON string"""
         self.insight_metadata = json.dumps(metadata)
     
-    def get_source_ids(self):
-        """Parse the data source IDs"""
+    def get_data_sources(self):
+        """Parse the data sources"""
         try:
-            return json.loads(self.data_source_ids) if self.data_source_ids else []
+            return json.loads(self.data_sources) if self.data_sources else []
         except json.JSONDecodeError:
             return []
     
-    def set_source_ids(self, ids):
-        """Set source IDs as JSON string"""
-        self.data_source_ids = json.dumps(ids)
+    def set_data_sources(self, sources):
+        """Set data sources as JSON string"""
+        self.data_sources = json.dumps(sources)
 
 # Database setup
 engine = create_engine(settings.database_url)
