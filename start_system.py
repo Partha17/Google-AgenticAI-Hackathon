@@ -443,60 +443,61 @@ class SystemManager:
         except Exception as e:
             self.log(f"❌ System startup failed: {e}", "ERROR")
             return False
+
+
+def main():
+    """Main function"""
+    import argparse
     
-    def main():
-        """Main function"""
-        import argparse
+    parser = argparse.ArgumentParser(description="Start Enhanced Financial Multi-Agent System")
+    # Dashboard option removed - now uses single optimized dashboard
+    parser.add_argument("--monitor", action="store_true", 
+                       help="Enable process monitoring")
+    parser.add_argument("--cleanup-only", action="store_true",
+                       help="Only cleanup existing processes and exit")
+    parser.add_argument("--force-reinstall", action="store_true",
+                       help="Force reinstall dependencies even if they exist")
+    parser.add_argument("--setup-only", action="store_true",
+                       help="Only setup environment (venv + dependencies) and exit")
+    
+    args = parser.parse_args()
+    
+    manager = SystemManager()
+    
+    if args.cleanup_only:
+        manager.cleanup_existing_processes()
+        return
+    
+    if args.setup_only:
+        manager.force_reinstall = args.force_reinstall
+        if manager.check_python_environment(args.force_reinstall):
+            manager.log("✅ Environment setup completed successfully!")
+        else:
+            manager.log("❌ Environment setup failed!", "ERROR")
+        return
+    
+    try:
+        # Set force reinstall flag
+        manager.force_reinstall = args.force_reinstall
+        success = manager.start_system()
         
-        parser = argparse.ArgumentParser(description="Start Enhanced Financial Multi-Agent System")
-# Dashboard option removed - now uses single optimized dashboard
-        parser.add_argument("--monitor", action="store_true", 
-                           help="Enable process monitoring")
-        parser.add_argument("--cleanup-only", action="store_true",
-                           help="Only cleanup existing processes and exit")
-        parser.add_argument("--force-reinstall", action="store_true",
-                           help="Force reinstall dependencies even if they exist")
-        parser.add_argument("--setup-only", action="store_true",
-                           help="Only setup environment (venv + dependencies) and exit")
+        if success and args.monitor:
+            # Start monitoring in background
+            monitor_thread = threading.Thread(target=manager.monitor_processes, daemon=True)
+            monitor_thread.start()
         
-        args = parser.parse_args()
-        
-        manager = SystemManager()
-        
-        if args.cleanup_only:
-            manager.cleanup_existing_processes()
-            return
-        
-        if args.setup_only:
-            manager.force_reinstall = args.force_reinstall
-            if manager.check_python_environment(args.force_reinstall):
-                manager.log("✅ Environment setup completed successfully!")
-            else:
-                manager.log("❌ Environment setup failed!", "ERROR")
-            return
-        
-        try:
-            # Set force reinstall flag
-            manager.force_reinstall = args.force_reinstall
-            success = manager.start_system()
-            
-            if success and args.monitor:
-                # Start monitoring in background
-                monitor_thread = threading.Thread(target=manager.monitor_processes, daemon=True)
-                monitor_thread.start()
-            
-            if success:
-                # Keep main thread alive
-                try:
-                    while True:
-                        time.sleep(1)
-                except KeyboardInterrupt:
-                    pass
-        
-        except KeyboardInterrupt:
-            pass
-        finally:
-            manager.stop_all_processes()
+        if success:
+            # Keep main thread alive
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
+    
+    except KeyboardInterrupt:
+        pass
+    finally:
+        manager.stop_all_processes()
 
 if __name__ == "__main__":
     main() 
