@@ -11,26 +11,35 @@ Your Enhanced Financial Multi-Agent System is now ready to run locally with inte
 
 ## 🎯 Quick Launch Options
 
-### Option 1: Interactive Launcher (Recommended)
+### Option 1: Complete System Startup (NEW - Recommended)
 ```bash
+# Start everything: Fi MCP Server + ADK Agents + Dashboard
+./start.sh
+
+# Or with Python directly
+python start_system.py
+```
+
+### Option 2: Dashboard Only Launcher
+```bash
+# Interactive dashboard launcher
 python launch_dashboard.py --interactive
-```
 
-### Option 2: Direct Commands
-```bash
-# Original Dashboard (Stable)
+# Direct dashboard launch
 python launch_dashboard.py --dashboard original
-
-# Enhanced Dashboard (Google Cloud Features)
 python launch_dashboard.py --dashboard enhanced
-
-# Custom port
-python launch_dashboard.py --dashboard original --port 8502
 ```
 
-### Option 3: Simple Script
+### Option 3: Advanced System Options
 ```bash
-./start_dashboard.sh
+# Complete system with enhanced dashboard
+./start.sh --dashboard enhanced
+
+# Complete system with process monitoring
+./start.sh --monitor
+
+# Cleanup existing processes only
+./start.sh --cleanup-only
 ```
 
 ## 💬 AI Analysis Features
