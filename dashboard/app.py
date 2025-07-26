@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import json
 import sys
 import os
+import random
 from typing import Dict, Any, List
 from difflib import get_close_matches
 
@@ -290,10 +291,11 @@ class ModernFinancialDashboard:
         self.render_financial_overview()
 
                 # Main content tabs with modern styling
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "🧠 AI Insights",
             "📈 Portfolio Analysis",
             "📊 Stock Tracker",
+            "📱 Subscription Tracker",
             "💳 Credit & Debt",
             "🤖 MCP AI Agent",
             "⚙️ System Status"
@@ -309,12 +311,15 @@ class ModernFinancialDashboard:
             self.render_stock_tracker()
 
         with tab4:
-            self.render_credit_analysis()
+            self.render_subscription_tracker()
 
         with tab5:
-            self.render_mcp_ai_agent()
+            self.render_credit_analysis()
 
         with tab6:
+            self.render_mcp_ai_agent()
+
+        with tab7:
             self.render_system_status()
 
     def render_financial_overview(self):
@@ -2045,6 +2050,403 @@ class ModernFinancialDashboard:
                 'error': str(e),
                 'suggestions': self.get_stock_suggestions(symbol, limit=5)
             }
+
+    def render_subscription_tracker(self):
+        """Render subscription tracking and management interface"""
+        st.header("📱 Subscription Tracker")
+        st.markdown("Track your recurring subscriptions and identify potential savings")
+
+        # Initialize session state for subscription data
+        if 'subscription_data' not in st.session_state:
+            st.session_state.subscription_data = None
+        if 'subscription_analysis' not in st.session_state:
+            st.session_state.subscription_analysis = None
+
+        # Main controls area
+        st.subheader("🔧 Choose Your Data Source")
+
+        # Data source selection
+        data_source = st.selectbox(
+            "Select how to provide transaction data:",
+            ["Select an option...", "Mock Data", "Upload Transactions", "Connect Bank Account"],
+            help="Choose how to provide transaction data"
+        )
+
+        if data_source == "Upload Transactions":
+            uploaded_file = st.file_uploader(
+                "Upload transaction CSV/JSON",
+                type=['csv', 'json'],
+                help="Upload your transaction data file"
+            )
+
+            if uploaded_file:
+                if st.button("📊 Analyze Subscriptions", type="primary"):
+                    with st.spinner("Analyzing your subscriptions..."):
+                        try:
+                            # Parse uploaded file
+                            if uploaded_file.name.endswith('.csv'):
+                                import pandas as pd
+                                df = pd.read_csv(uploaded_file)
+                                transactions = df.to_dict('records')
+                            else:
+                                transactions = json.load(uploaded_file)
+
+                            # Analyze subscriptions
+                            st.session_state.subscription_data = transactions
+                            st.session_state.subscription_analysis = self.analyze_subscriptions_mock(transactions)
+                            st.success("✅ Subscription analysis complete!")
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ Error analyzing subscriptions: {str(e)}")
+
+        elif data_source == "Mock Data":
+            if st.button("📊 Analyze Mock Subscriptions", type="primary"):
+                with st.spinner("Analyzing mock subscription data..."):
+                    try:
+                        mock_transactions = self.generate_mock_transaction_data()
+                        st.session_state.subscription_data = mock_transactions
+                        st.session_state.subscription_analysis = self.analyze_subscriptions_mock(mock_transactions)
+                        st.success("✅ Mock subscription analysis complete!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error analyzing subscriptions: {str(e)}")
+
+        elif data_source == "Connect Bank Account":
+            st.info("🔗 Bank account connection feature coming soon!")
+            st.write("This feature will allow you to connect your bank account to automatically analyze your transactions for subscriptions.")
+
+        # Main content area
+        if st.session_state.subscription_analysis:
+            analysis = st.session_state.subscription_analysis
+
+            # Summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                st.metric(
+                    "Total Subscriptions",
+                    analysis['summary']['total_subscriptions'],
+                    help="Number of active subscriptions found"
+                )
+
+            with col2:
+                st.metric(
+                    "Monthly Cost",
+                    f"₹{analysis['summary']['total_monthly_cost']:,}",
+                    help="Total monthly subscription cost"
+                )
+
+            with col3:
+                st.metric(
+                    "Annual Cost",
+                    f"₹{analysis['summary']['total_yearly_cost']:,}",
+                    help="Total annual subscription cost"
+                )
+
+            with col4:
+                potential_savings = sum(rec.get('potential_savings', 0) for rec in analysis['recommendations'])
+                st.metric(
+                    "Potential Savings",
+                    f"₹{potential_savings:,.0f}",
+                    help="Potential annual savings from recommendations"
+                )
+
+            # Subscription list
+            st.subheader("📋 Your Subscriptions")
+
+            if analysis['subscriptions']:
+                for i, subscription in enumerate(analysis['subscriptions']):
+                    with st.expander(f"🔸 {subscription['name']} - ₹{subscription['amount']}/{subscription['frequency']}"):
+                        col1, col2 = st.columns([2, 1])
+
+                        with col1:
+                            st.write(f"**Category:** {subscription['category'].title()}")
+                            st.write(f"**Merchant:** {subscription['merchant']}")
+                            st.write(f"**Description:** {subscription['description']}")
+                            st.write(f"**Annual Cost:** ₹{subscription['annual_cost']:,.2f}")
+
+                        with col2:
+                            st.write(f"**Last Charge:** {subscription['last_charge_date'][:10]}")
+                            st.write(f"**Next Charge:** {subscription['next_charge_date'][:10]}")
+
+                            # Usage indicator
+                            usage_info = analysis['usage_analysis'].get(subscription['name'], {})
+                            usage_level = usage_info.get('usage_level', 'unknown')
+
+                            if usage_level == 'high':
+                                st.success("🟢 High Usage")
+                            elif usage_level == 'medium':
+                                st.warning("🟡 Medium Usage")
+                            elif usage_level == 'low':
+                                st.error("🔴 Low Usage")
+                            else:
+                                st.info("⚪ Unknown Usage")
+
+                        # Action buttons
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            if st.button(f"❌ Cancel {subscription['name']}", key=f"cancel_{i}"):
+                                st.warning(f"Would cancel {subscription['name']} - saves ₹{subscription['annual_cost']:,.2f}/year")
+
+                        with col2:
+                            if st.button(f"📊 Usage Details", key=f"usage_{i}"):
+                                st.info(f"Usage analysis for {subscription['name']}: {usage_level} usage level")
+
+                        with col3:
+                            if st.button(f"💰 Cost Breakdown", key=f"cost_{i}"):
+                                st.info(f"Cost breakdown for {subscription['name']}: ₹{subscription['annual_cost']:,.2f}/year")
+            else:
+                st.info("No subscriptions found in your transaction data.")
+
+            # Recommendations
+            if analysis['recommendations']:
+                st.subheader("💡 Smart Recommendations")
+
+                for i, rec in enumerate(analysis['recommendations']):
+                    priority_color = {
+                        'high': '🔴',
+                        'medium': '🟡',
+                        'low': '🟢'
+                    }.get(rec['priority'], '⚪')
+
+                    with st.expander(f"{priority_color} {rec['type'].title()}: {rec['reason']}"):
+                        st.write(f"**Action:** {rec['type'].title()}")
+                        st.write(f"**Reason:** {rec['reason']}")
+
+                        if rec['type'] == 'cancel':
+                            st.write(f"**Potential Savings:** ₹{rec['potential_savings']:,.2f}/year")
+                            st.write(f"**Subscription:** {rec['subscription']}")
+
+                        elif rec['type'] == 'consolidate':
+                            st.write(f"**Potential Savings:** ₹{rec['potential_savings']:,.2f}/year")
+                            st.write(f"**Category:** {rec['category'].title()}")
+                            st.write(f"**Subscriptions:** {', '.join(rec['subscriptions'])}")
+
+                        elif rec['type'] == 'review_cost':
+                            st.write(f"**Current Cost:** ₹{rec['current_cost']:,.2f}/year")
+                            st.write(f"**Subscription:** {rec['subscription']}")
+
+                        # Action buttons
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button(f"✅ Apply Recommendation", key=f"apply_{i}"):
+                                st.success(f"Recommendation applied: {rec['type']}")
+
+                        with col2:
+                            if st.button(f"❌ Dismiss", key=f"dismiss_{i}"):
+                                st.info("Recommendation dismissed")
+
+            # Cost breakdown chart
+            if analysis['cost_analysis']['category_breakdown']:
+                st.subheader("📊 Cost Breakdown by Category")
+
+                categories = list(analysis['cost_analysis']['category_breakdown'].keys())
+                costs = list(analysis['cost_analysis']['category_breakdown'].values())
+
+                fig = px.pie(
+                    names=categories,
+                    values=costs,
+                    title="Annual Subscription Costs by Category"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Usage analysis
+            st.subheader("📈 Usage Analysis")
+
+            usage_data = []
+            for sub_name, usage_info in analysis['usage_analysis'].items():
+                usage_data.append({
+                    'Subscription': sub_name,
+                    'Usage Level': usage_info['usage_level'].title(),
+                    'Transaction Count': usage_info['transaction_count']
+                })
+
+            if usage_data:
+                import pandas as pd
+                usage_df = pd.DataFrame(usage_data)
+                st.dataframe(usage_df, use_container_width=True)
+
+        elif data_source != "Select an option...":
+            # Show instructions when no analysis is available
+            st.info("👆 Select a data source above to analyze your subscriptions")
+
+            # Show sample data structure
+            with st.expander("📋 Sample Transaction Data Format"):
+                st.code("""
+{
+    "date": "2024-01-15",
+    "amount": 999.00,
+    "merchant": "netflix",
+    "description": "Netflix subscription payment",
+    "category": "entertainment"
+}
+                """, language="json")
+
+    def generate_mock_transaction_data(self) -> List[Dict[str, Any]]:
+        """Generate mock transaction data for subscription analysis"""
+        from datetime import datetime, timedelta
+        import random
+
+        # Mock subscription transactions
+        subscriptions = [
+            {"name": "Netflix", "amount": 499, "frequency": "monthly", "merchant": "netflix"},
+            {"name": "Amazon Prime", "amount": 1499, "frequency": "yearly", "merchant": "amazon prime"},
+            {"name": "Spotify Premium", "amount": 119, "frequency": "monthly", "merchant": "spotify"},
+            {"name": "Adobe Creative Cloud", "amount": 1999, "frequency": "monthly", "merchant": "adobe"},
+            {"name": "Cult Fit", "amount": 999, "frequency": "monthly", "merchant": "cult fit"},
+            {"name": "Swiggy One", "amount": 299, "frequency": "monthly", "merchant": "swiggy"},
+            {"name": "Notion Pro", "amount": 799, "frequency": "monthly", "merchant": "notion"},
+            {"name": "Canva Pro", "amount": 399, "frequency": "monthly", "merchant": "canva"},
+            {"name": "Zoom Pro", "amount": 1499, "frequency": "monthly", "merchant": "zoom"},
+            {"name": "Dropbox Plus", "amount": 999, "frequency": "monthly", "merchant": "dropbox"}
+        ]
+
+        transactions = []
+        base_date = datetime.now() - timedelta(days=90)
+
+        for sub in subscriptions:
+            # Generate multiple transactions for each subscription
+            if sub['frequency'] == 'monthly':
+                for i in range(3):  # Last 3 months
+                    transaction_date = base_date + timedelta(days=i*30)
+                    transactions.append({
+                        'date': transaction_date,
+                        'amount': sub['amount'],
+                        'merchant': sub['merchant'],
+                        'description': f"{sub['name']} subscription payment",
+                        'category': 'subscription'
+                    })
+            elif sub['frequency'] == 'yearly':
+                # Yearly subscription - one transaction
+                transactions.append({
+                    'date': base_date,
+                    'amount': sub['amount'],
+                    'merchant': sub['merchant'],
+                    'description': f"{sub['name']} yearly subscription",
+                    'category': 'subscription'
+                })
+
+        # Add some regular transactions (non-subscriptions)
+        regular_transactions = [
+            {"amount": 2500, "merchant": "grocery store", "description": "Weekly groceries"},
+            {"amount": 1500, "merchant": "restaurant", "description": "Dinner"},
+            {"amount": 500, "merchant": "gas station", "description": "Fuel"},
+            {"amount": 2000, "merchant": "online store", "description": "Shopping"},
+        ]
+
+        for i, txn in enumerate(regular_transactions):
+            transactions.append({
+                'date': base_date + timedelta(days=i*7),
+                'amount': txn['amount'],
+                'merchant': txn['merchant'],
+                'description': txn['description'],
+                'category': 'regular'
+            })
+
+        return transactions
+
+    def analyze_subscriptions_mock(self, transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Mock subscription analysis (simplified version)"""
+        # This is a simplified version - in production, you'd use the actual agent
+
+        # Identify subscriptions from transactions
+        subscriptions = []
+        for txn in transactions:
+            if txn.get('category') == 'subscription' or any(keyword in txn.get('merchant', '').lower() for keyword in ['netflix', 'amazon', 'spotify', 'adobe', 'cult', 'swiggy', 'notion', 'canva', 'zoom', 'dropbox']):
+                # Determine category
+                merchant = txn.get('merchant', '').lower()
+                if any(streaming in merchant for streaming in ['netflix', 'spotify']):
+                    category = 'streaming'
+                elif 'amazon' in merchant:
+                    category = 'shopping'
+                elif any(software in merchant for software in ['adobe', 'notion', 'canva', 'zoom', 'dropbox']):
+                    category = 'software'
+                elif 'cult' in merchant:
+                    category = 'fitness'
+                elif 'swiggy' in merchant:
+                    category = 'food_delivery'
+                else:
+                    category = 'other'
+
+                # Calculate frequency (simplified)
+                frequency = 'monthly' if txn.get('amount', 0) < 1000 else 'yearly'
+
+                # Calculate annual cost
+                annual_cost = txn.get('amount', 0) * (12 if frequency == 'monthly' else 1)
+
+                subscriptions.append({
+                    'name': txn.get('merchant', '').title(),
+                    'category': category,
+                    'amount': txn.get('amount', 0),
+                    'frequency': frequency,
+                    'merchant': txn.get('merchant', ''),
+                    'last_charge_date': txn.get('date', datetime.now()).isoformat(),
+                    'next_charge_date': (txn.get('date', datetime.now()) + timedelta(days=30)).isoformat(),
+                    'description': txn.get('description', ''),
+                    'annual_cost': annual_cost
+                })
+
+        # Remove duplicates
+        unique_subs = {}
+        for sub in subscriptions:
+            if sub['merchant'] not in unique_subs:
+                unique_subs[sub['merchant']] = sub
+
+        subscriptions = list(unique_subs.values())
+
+        # Generate usage analysis
+        usage_analysis = {}
+        for sub in subscriptions:
+            usage_analysis[sub['name']] = {
+                'usage_level': random.choice(['high', 'medium', 'low']),
+                'transaction_count': random.randint(1, 5),
+                'last_used': sub['last_charge_date']
+            }
+
+        # Calculate costs
+        total_monthly = sum(sub['annual_cost'] / 12 for sub in subscriptions)
+        total_yearly = sum(sub['annual_cost'] for sub in subscriptions)
+
+        category_costs = {}
+        for sub in subscriptions:
+            cat = sub['category']
+            if cat not in category_costs:
+                category_costs[cat] = 0
+            category_costs[cat] += sub['annual_cost']
+
+        # Generate recommendations
+        recommendations = []
+        for sub in subscriptions:
+            usage_level = usage_analysis[sub['name']]['usage_level']
+            if usage_level == 'low':
+                recommendations.append({
+                    'type': 'cancel',
+                    'subscription': sub['name'],
+                    'reason': 'Low usage detected',
+                    'potential_savings': sub['annual_cost'],
+                    'priority': 'high'
+                })
+
+        return {
+            'subscriptions': subscriptions,
+            'usage_analysis': usage_analysis,
+            'cost_analysis': {
+                'total_monthly': round(total_monthly, 2),
+                'total_yearly': round(total_yearly, 2),
+                'category_breakdown': {k: round(v, 2) for k, v in category_costs.items()},
+                'subscription_count': len(subscriptions)
+            },
+            'recommendations': recommendations,
+            'summary': {
+                'total_subscriptions': len(subscriptions),
+                'total_monthly_cost': round(total_monthly, 2),
+                'total_yearly_cost': round(total_yearly, 2),
+                'categories': list(set(sub['category'] for sub in subscriptions)),
+                'most_expensive_category': max(category_costs.items(), key=lambda x: x[1])[0] if category_costs else None,
+                'analysis_date': datetime.now().isoformat()
+            }
+        }
 
 def main():
     """Main entry point"""
