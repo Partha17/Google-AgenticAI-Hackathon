@@ -394,11 +394,38 @@ class ModernFinancialDashboard:
                     recent_data = db.query(MCPData).order_by(MCPData.created_at.desc()).limit(20).all()
                     recent_insights = db.query(AIInsight).order_by(AIInsight.created_at.desc()).limit(5).all()
                     
-                    # Prepare context with actual data
+                    # Extract actual financial values from database
+                    def extract_financial_values(mcp_data):
+                        """Extract actual financial values from MCP data"""
+                        try:
+                            import json
+                            raw_data = json.loads(mcp_data.raw_data)
+                            if raw_data.get('success') and 'data' in raw_data:
+                                content = raw_data['data'].get('content', [])
+                                if content and content[0].get('type') == 'text':
+                                    # Parse the nested JSON
+                                    inner_data = json.loads(content[0]['text'])
+                                    return {
+                                        'data_type': mcp_data.data_type,
+                                        'parsed_content': inner_data,
+                                        'timestamp': raw_data.get('timestamp')
+                                    }
+                        except Exception as e:
+                            st.warning(f"Error extracting {mcp_data.data_type}: {e}")
+                        return None
+                    
+                    # Process all financial data
+                    extracted_data = {}
+                    for data in recent_data:
+                        extracted = extract_financial_values(data)
+                        if extracted:
+                            extracted_data[data.data_type] = extracted['parsed_content']
+                    
+                    # Prepare context with actual financial values
                     financial_context = {
                         "query": user_question,
-                        "recent_data_count": len(recent_data),
-                        "data_types": list(set([data.data_type for data in recent_data])) if recent_data else [],
+                        "data_available": list(extracted_data.keys()),
+                        "financial_data": extracted_data,
                         "recent_insights": [
                             {
                                 "title": insight.title,
@@ -408,8 +435,48 @@ class ModernFinancialDashboard:
                         ]
                     }
                     
-                    # Add sample data if no real data
-                    if not recent_data:
+                    # Add financial summary for easy AI analysis
+                    if extracted_data:
+                        summary = {}
+                        
+                        # Extract net worth summary
+                        if 'net_worth' in extracted_data:
+                            net_worth = extracted_data['net_worth'].get('netWorthResponse', {})
+                            assets = net_worth.get('assetValues', [])
+                            liabilities = net_worth.get('liabilityValues', [])
+                            
+                            total_assets = sum(int(asset['value']['units']) for asset in assets)
+                            total_liabilities = sum(int(liability['value']['units']) for liability in liabilities)
+                            
+                            summary['net_worth'] = {
+                                'total_assets': total_assets,
+                                'total_liabilities': total_liabilities,
+                                'net_worth': total_assets - total_liabilities,
+                                'currency': 'INR',
+                                'asset_breakdown': {
+                                    asset['netWorthAttribute'].replace('ASSET_TYPE_', ''): int(asset['value']['units'])
+                                    for asset in assets
+                                },
+                                'liability_breakdown': {
+                                    liability['netWorthAttribute'].replace('LIABILITY_TYPE_', ''): int(liability['value']['units'])
+                                    for liability in liabilities
+                                }
+                            }
+                        
+                        # Extract credit report summary
+                        if 'credit_report' in extracted_data:
+                            credit_data = extracted_data['credit_report'].get('creditReportResponse', {})
+                            if credit_data:
+                                summary['credit_profile'] = {
+                                    'score': credit_data.get('score', 'N/A'),
+                                    'accounts_summary': credit_data.get('summary', {}),
+                                    'recent_inquiries': len(credit_data.get('inquiries', [])),
+                                    'active_loans': len(credit_data.get('loans', []))
+                                }
+                        
+                        financial_context['financial_summary'] = summary
+                    else:
+                        # Add sample data if no real data
                         financial_context["sample_portfolio"] = {
                             "note": "Sample data - connect Fi MCP server for real data",
                             "total_value": 100000,
