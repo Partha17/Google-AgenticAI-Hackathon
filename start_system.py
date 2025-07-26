@@ -12,6 +12,7 @@ import threading
 import signal
 from pathlib import Path
 import argparse
+import requests
 
 # Add logging support
 from services.logger_config import setup_logging, get_logger, log_startup, log_shutdown, log_error
