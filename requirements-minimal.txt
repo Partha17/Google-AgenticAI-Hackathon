@@ -1,0 +1,18 @@
+streamlit>=1.29.0
+pandas>=2.2.0
+numpy>=1.26.0
+plotly>=5.17.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+sqlalchemy>=2.0.25
+pydantic>=2.5.2
+pydantic-settings>=2.1.0
+schedule>=1.2.0
+
+# Core Google services only
+google-generativeai>=0.3.2
+google-auth>=2.17.0
+google-cloud-core>=2.3.0
+
+# Minimal asyncio support
+aiohttp>=3.9.1 

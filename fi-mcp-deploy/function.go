@@ -92,15 +92,12 @@ func (m *AuthMiddleware) AuthMiddleware(next server.ToolHandlerFunc) server.Tool
 }
 
 func (m *AuthMiddleware) getLoginUrl(sessionId string) string {
-	port := os.Getenv("FI_MCP_PORT")
-	if port == "" {
-		port = "8080"
-	}
-	// For Cloud Functions, we need to get the current function URL
+	// For Cloud Functions, use the function URL if available
 	if functionURL := os.Getenv("FUNCTION_URL"); functionURL != "" {
 		return fmt.Sprintf("%s/mockWebPage?sessionId=%s", functionURL, sessionId)
 	}
-	return fmt.Sprintf("http://localhost:%s/mockWebPage?sessionId=%s", port, sessionId)
+	// Fallback to generic URL that the user can update
+	return fmt.Sprintf("https://YOUR-FUNCTION-URL/mockWebPage?sessionId=%s", sessionId)
 }
 
 func (m *AuthMiddleware) AddSession(sessionId, phoneNumber string) {
@@ -122,37 +119,37 @@ func GetAllowedMobileNumbers() []string {
 	return numbers
 }
 
-var authMiddlewareFunc *AuthMiddleware
-var mcpServerFunc *server.Server
+var authMiddleware *AuthMiddleware
+var mcpServer *server.Server
 
 func init() {
-	authMiddlewareFunc = NewAuthMiddleware()
-	mcpServerFunc = setupMCPServerFunc()
+	authMiddleware = NewAuthMiddleware()
+	mcpServer = setupMCPServer()
 
 	// Register the Cloud Function
-	functions.HTTP("FiMCPFunction", handleFunctionRequest)
+	functions.HTTP("FiMCPFunction", handleRequest)
 }
 
-func setupMCPServerFunc() *server.Server {
+func setupMCPServer() *server.Server {
 	s := server.NewMCPServer(
-		"Hackathon MCP",
-		"0.1.0",
+		"Fi MCP Server",
+		"1.0.0",
 		server.WithInstructions("A financial portfolio management MCP server that provides secure access to users' financial data through Fi Money, a financial hub for all things money. This MCP server enables users to:\n- Access comprehensive net worth analysis with asset/liability breakdowns\n- Retrieve detailed transaction histories for mutual funds and Employee Provident Fund accounts\n- View credit reports with scores, loan details, and account histories, this also contains user's date of birth that can be used for calculating their age\n\nIf the person asks, you can tell about Fi Money that it is money management platform that offers below services in partnership with regulated entities:\n\nAVAILABLE SERVICES:\n- Digital savings account with zero Forex cards\n- Invest in Indian Mutual funds, US Stocks (partnership with licensed brokers), Smart and Fixed Deposits.\n- Instant Personal Loans \n- Faster UPI and Bank Transfers payments\n- Credit score monitoring and reports\n\nIMPORTANT LIMITATIONS:\n- This MCP server retrieves only actual user data via Net worth tracker and based on consent provided by the user  and does not generate hypothetical or estimated financial information\n- In this version of the MCP server, user's historical bank transactions, historical stocks transaction data, salary (unless categorically declared) is not present. Don't assume these data points for any kind of analysis.\n\nCRITICAL INSTRUCTIONS FOR FINANCIAL DATA:\n\n1. DATA BOUNDARIES: Only provide information that exists in the user's Fi Money Net worth tracker. Never estimate, extrapolate, or generate hypothetical financial data.\n\n2. SPENDING ANALYSIS: If user asks about spending patterns, categories, or analysis tell the user we currently don't offer that data through the MCP:\n   - For detailed spending insights, direct them to: \"For comprehensive spending analysis and categorization, please use the Fi Money mobile app which provides detailed spending insights and budgeting tools.\"\n\n3. MISSING DATA HANDLING: If requested data is not available:\n   - Clearly state what data is missing\n   - Explain how user can connect additional accounts in Fi Money app\n   - Never fill gaps with estimated or generic information\n"),
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(true, true),
 		server.WithLogging(),
-		server.WithToolHandlerMiddleware(authMiddlewareFunc.AuthMiddleware),
+		server.WithToolHandlerMiddleware(authMiddleware.AuthMiddleware),
 	)
 
 	// Register tools from ToolList
 	for _, tool := range ToolList {
-		s.AddTool(mcp.NewTool(tool.Name, mcp.WithDescription(tool.Description)), dummyHandlerFunc)
+		s.AddTool(mcp.NewTool(tool.Name, mcp.WithDescription(tool.Description)), dummyHandler)
 	}
 
 	return s
 }
 
-func handleFunctionRequest(w http.ResponseWriter, r *http.Request) {
+func handleRequest(w http.ResponseWriter, r *http.Request) {
 	// Handle static file requests
 	if r.URL.Path == "/static/" || strings.HasPrefix(r.URL.Path, "/static/") {
 		handleStaticFiles(w, r)
@@ -161,7 +158,7 @@ func handleFunctionRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Handle MCP stream requests
 	if strings.HasPrefix(r.URL.Path, "/mcp/") {
-		streamableServer := server.NewStreamableHTTPServer(mcpServerFunc,
+		streamableServer := server.NewStreamableHTTPServer(mcpServer,
 			server.WithEndpointPath("/stream"),
 		)
 		streamableServer.ServeHTTP(w, r)
@@ -175,10 +172,24 @@ func handleFunctionRequest(w http.ResponseWriter, r *http.Request) {
 	case "/login":
 		loginHandler(w, r)
 	default:
-		// Root handler - provide basic info
+		// Root handler - provide basic info about the MCP server
 		if r.URL.Path == "/" || r.URL.Path == "" {
 			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, `{"status":"ok","service":"Fi MCP Server","version":"0.1.0","endpoints":{"/mcp/stream":"MCP endpoint","/mockWebPage":"Authentication page","/login":"Login endpoint"}}`)
+			functionURL := r.Header.Get("X-Forwarded-Proto") + "://" + r.Host
+			response := fmt.Sprintf(`{
+				"status": "ok",
+				"service": "Fi MCP Server",
+				"version": "1.0.0",
+				"description": "Financial data MCP server for Fi Money platform",
+				"endpoints": {
+					"mcp_stream": "%s/mcp/stream",
+					"login_page": "%s/mockWebPage?sessionId=YOUR_SESSION_ID",
+					"login_endpoint": "%s/login"
+				},
+				"allowed_phone_numbers": %d,
+				"instructions": "Use the MCP stream endpoint to connect via MCP client. Authentication required via login page."
+			}`, functionURL, functionURL, functionURL, len(GetAllowedMobileNumbers()))
+			fmt.Fprint(w, response)
 		} else {
 			http.NotFound(w, r)
 		}
@@ -210,7 +221,7 @@ func handleStaticFiles(w http.ResponseWriter, r *http.Request) {
 	w.Write(content)
 }
 
-func dummyHandlerFunc(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func dummyHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return mcp.NewToolResultText("dummy handler"), nil
 }
 
@@ -262,7 +273,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authMiddlewareFunc.AddSession(sessionId, phoneNumber)
+	authMiddleware.AddSession(sessionId, phoneNumber)
 
 	// Read template from embedded filesystem
 	templateContent, err := staticFiles.ReadFile("static/login_successful.html")

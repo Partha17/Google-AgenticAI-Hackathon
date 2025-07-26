@@ -19,3 +19,8 @@ test-deployment.sh
 !static/
 !test_data_dir/
 !.env.yaml 
+# Exclude conflicting files for Cloud Functions
+middlewares/
+pkg/
+test_data_dir_integrity_test.go
+main_standalone.go.bak

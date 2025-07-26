@@ -1,0 +1,56 @@
+# Use Python 3.11 slim image for efficiency
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PORT=8080
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements-cloud.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-cloud.txt
+
+# Copy the entire application
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p logs
+
+# Expose the port
+EXPOSE 8080
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "🚀 Starting Fi Financial AI Dashboard on Cloud Run"\n\
+echo "Port: $PORT"\n\
+echo "Environment: Production"\n\
+\n\
+# Run database setup\n\
+python -c "from models.database import create_tables; create_tables()"\n\
+\n\
+# Start Streamlit with Cloud Run configuration\n\
+streamlit run dashboard/app.py \\\n\
+    --server.port=$PORT \\\n\
+    --server.address=0.0.0.0 \\\n\
+    --server.headless=true \\\n\
+    --server.enableCORS=false \\\n\
+    --server.enableXsrfProtection=false \\\n\
+    --browser.gatherUsageStats=false' > /app/start.sh
+
+# Make startup script executable
+RUN chmod +x /app/start.sh
+
+# Run the startup script
+CMD ["/app/start.sh"] 

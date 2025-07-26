@@ -1,4 +1,4 @@
-module example.com/fi-mcp-lite
+module example.com/fi-mcp-server
 
 go 1.23
 
