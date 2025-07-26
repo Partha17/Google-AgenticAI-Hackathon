@@ -11,18 +11,59 @@ from datetime import datetime, timedelta
 import json
 import asyncio
 import logging
+import sys
+import os
 
-# Import all Google Cloud services
-from services.google_cloud_manager import google_cloud_manager
-from services.google_vertex_ai_enhanced import vertex_ai_enhanced
-from services.google_auth_manager import google_auth_manager
-from services.google_scheduler_manager import google_scheduler_manager
-from services.google_cloud_functions_manager import google_cloud_functions_manager
-from dashboard.google_charts_integration import google_charts
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import ADK components
-from adk_agents.adk_orchestrator import adk_orchestrator
-from dashboard.adk_integration import adk_integration
+# Import all Google Cloud services with error handling
+try:
+    from services.google_cloud_manager import google_cloud_manager
+    from services.google_vertex_ai_enhanced import vertex_ai_enhanced
+    from services.google_auth_manager import google_auth_manager
+    from services.google_scheduler_manager import google_scheduler_manager
+    from services.google_cloud_functions_manager import google_cloud_functions_manager
+    from dashboard.google_charts_integration import google_charts
+    
+    # Import ADK components
+    from adk_agents.adk_orchestrator import adk_orchestrator
+    from dashboard.adk_integration import adk_integration
+    
+    ENHANCED_FEATURES_AVAILABLE = True
+    logging.info("✅ All enhanced features loaded successfully")
+    
+except ImportError as e:
+    logging.warning(f"⚠️ Some enhanced features unavailable: {e}")
+    ENHANCED_FEATURES_AVAILABLE = False
+    
+    # Create mock objects for graceful degradation
+    class MockService:
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: {"error": "Service not available in local mode"}
+    
+    google_cloud_manager = MockService()
+    vertex_ai_enhanced = MockService()
+    google_auth_manager = MockService()
+    google_scheduler_manager = MockService()
+    google_cloud_functions_manager = MockService()
+    google_charts = MockService()
+    adk_orchestrator = MockService()
+    adk_integration = MockService()
+
+# Fallback imports for basic functionality
+try:
+    from models.database import SessionLocal, AIInsight, MCPData, create_tables
+    from services.insight_generator import insight_generator
+    from services.real_data_collector import real_data_collector
+    from services.quota_manager import quota_manager
+    BASIC_FEATURES_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"⚠️ Basic features unavailable: {e}")
+    BASIC_FEATURES_AVAILABLE = False
+    insight_generator = MockService()
+    real_data_collector = MockService()
+    quota_manager = MockService()
 
 # Configure Streamlit
 st.set_page_config(
@@ -108,8 +149,197 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+def show_basic_dashboard():
+    """Show basic dashboard functionality without Google Cloud dependencies"""
+    st.header("📊 Financial Dashboard (Local Mode)")
+    
+    # Basic tabs
+    tab1, tab2, tab3 = st.tabs(["📈 Overview", "🤖 AI Analysis", "⚙️ Settings"])
+    
+    with tab1:
+        st.subheader("Financial Overview")
+        
+        if BASIC_FEATURES_AVAILABLE:
+            try:
+                # Get basic financial data
+                db = SessionLocal()
+                recent_data = db.query(MCPData).order_by(MCPData.created_at.desc()).limit(10).all()
+                
+                if recent_data:
+                    # Create basic charts
+                    df = pd.DataFrame([{
+                        'timestamp': data.created_at,
+                        'data_type': data.data_type,
+                        'id': data.id,
+                        'processed': data.processed
+                    } for data in recent_data])
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Total Records", len(recent_data))
+                        
+                    with col2:
+                        processed_count = df['processed'].sum() if not df.empty else 0
+                        st.metric("Processed Records", processed_count)
+                    
+                    # Data type distribution
+                    if not df.empty:
+                        fig = px.pie(df.groupby('data_type').size().reset_index(name='count'), 
+                                   values='count', names='data_type', title="Data Type Distribution")
+                        st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("No financial data available. Start the Fi MCP server to collect data.")
+                    
+                db.close()
+                
+            except Exception as e:
+                st.error(f"Error loading basic data: {e}")
+                st.info("Please ensure the database is properly configured.")
+        else:
+            st.warning("Database not available in this configuration.")
+    
+    with tab2:
+        st.subheader("AI Analysis")
+        
+        if BASIC_FEATURES_AVAILABLE:
+            # Simple AI analysis input
+            user_input = st.text_area("Ask a financial question:", 
+                                    placeholder="E.g., What's my spending pattern this month?")
+            
+            if st.button("Get AI Insight") and user_input:
+                with st.spinner("Generating insight..."):
+                    try:
+                        # Fetch actual financial data
+                        db = SessionLocal()
+                        
+                        # Get recent financial data
+                        recent_data = db.query(MCPData).order_by(MCPData.created_at.desc()).limit(20).all()
+                        
+                        # Get recent AI insights
+                        recent_insights = db.query(AIInsight).order_by(AIInsight.created_at.desc()).limit(5).all()
+                        
+                        # Prepare financial context
+                        financial_context = {
+                            "query": user_input,
+                            "recent_data_count": len(recent_data),
+                            "data_types": list(set([data.data_type for data in recent_data])) if recent_data else [],
+                            "recent_insights": [
+                                {
+                                    "title": insight.title,
+                                    "type": insight.insight_type,
+                                    "content": insight.content[:200] + "..." if len(insight.content) > 200 else insight.content
+                                } for insight in recent_insights
+                            ]
+                        }
+                        
+                        # Try to get specific financial data from Fi MCP server
+                        try:
+                            import requests
+                            # Example endpoints - adjust based on actual Fi MCP server API
+                            mcp_response = requests.get("http://localhost:8080/api/summary", timeout=5)
+                            if mcp_response.status_code == 200:
+                                financial_context["mcp_data"] = mcp_response.json()
+                        except:
+                            financial_context["mcp_data"] = "Fi MCP server data unavailable"
+                        
+                        # Add sample portfolio data if no real data available
+                        if not recent_data:
+                            financial_context["sample_portfolio"] = {
+                                "note": "Sample data for demonstration - connect Fi MCP server for real data",
+                                "total_value": 100000,
+                                "holdings": [
+                                    {"symbol": "AAPL", "shares": 50, "value": 8500},
+                                    {"symbol": "GOOGL", "shares": 20, "value": 5000},
+                                    {"symbol": "MSFT", "shares": 30, "value": 10000},
+                                    {"symbol": "Bond Fund", "allocation": "25%", "value": 25000}
+                                ],
+                                "cash": 51500
+                            }
+                        
+                        db.close()
+                        
+                        # Use enhanced AI agent with financial context
+                        from services.enhanced_ai_agent import enhanced_ai_agent
+                        
+                        # Choose appropriate AI method based on query
+                        query_lower = user_input.lower()
+                        
+                        if "portfolio" in query_lower:
+                            insight = enhanced_ai_agent.generate_portfolio_analysis(financial_context)
+                        elif "risk" in query_lower:
+                            insight = enhanced_ai_agent.generate_risk_assessment(financial_context)
+                        elif "transaction" in query_lower or "spending" in query_lower:
+                            insight = enhanced_ai_agent.analyze_transaction_patterns([financial_context])
+                        else:
+                            insight = enhanced_ai_agent.generate_market_insight(financial_context)
+                        
+                        st.success("AI Insight:")
+                        st.write(insight)
+                        
+                        # Show data context used
+                        with st.expander("📊 Data Context Used"):
+                            st.json(financial_context)
+                        
+                    except Exception as e:
+                        st.error(f"AI analysis unavailable: {e}")
+                        st.info("Make sure the database is configured and the Google API key is set in your .env file")
+        else:
+            st.info("AI analysis requires Google API key configuration.")
+    
+    with tab3:
+        st.subheader("System Settings")
+        
+        st.write("**System Status:**")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("✅ Dashboard: Running")
+            st.write(f"{'✅' if BASIC_FEATURES_AVAILABLE else '❌'} Database: {'Available' if BASIC_FEATURES_AVAILABLE else 'Unavailable'}")
+        
+        with col2:
+            st.write(f"{'✅' if ENHANCED_FEATURES_AVAILABLE else '❌'} Google Cloud: {'Connected' if ENHANCED_FEATURES_AVAILABLE else 'Local Mode'}")
+            
+        # Fi MCP Server status
+        try:
+            import requests
+            response = requests.get("http://localhost:8080", timeout=2)
+            st.write("✅ Fi MCP Server: Running")
+        except:
+            st.write("❌ Fi MCP Server: Not running")
+            st.info("Start the Fi MCP server: `cd fi-mcp-server && go run main.go`")
+
+
+def display_local_status():
+    """Display local system status in sidebar"""
+    st.sidebar.markdown("## 🏠 Local Mode Status")
+    
+    # Basic system status
+    st.sidebar.success("✅ Dashboard: Active")
+    
+    if BASIC_FEATURES_AVAILABLE:
+        st.sidebar.success("✅ Database: Connected")
+    else:
+        st.sidebar.error("❌ Database: Unavailable")
+    
+    # Fi MCP Server check
+    try:
+        import requests
+        response = requests.get("http://localhost:8080", timeout=1)
+        st.sidebar.success("✅ Fi MCP Server: Running")
+    except:
+        st.sidebar.warning("⚠️ Fi MCP Server: Not detected")
+    
+    st.sidebar.markdown("### 🚀 Quick Start")
+    st.sidebar.info("To enable full features:\n1. Configure Google Cloud\n2. Set up environment variables\n3. Restart dashboard")
+
+
 def main():
     """Main enhanced dashboard application"""
+    
+    # Feature availability warning
+    if not ENHANCED_FEATURES_AVAILABLE:
+        st.warning("⚠️ Running in Local Mode - Some enhanced features unavailable. For full functionality, configure Google Cloud services.")
     
     # Enhanced Header
     st.markdown("""
@@ -127,15 +357,30 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Authentication
-    auth_result = google_auth_manager.create_login_widget()
-    
-    if not auth_result.get("authenticated"):
-        st.info("🔐 Please authenticate to access the enhanced dashboard features")
+    # Authentication (only if enhanced features are available)
+    if ENHANCED_FEATURES_AVAILABLE:
+        try:
+            auth_result = google_auth_manager.create_login_widget()
+            
+            if not auth_result.get("authenticated"):
+                st.info("🔐 Please authenticate to access the enhanced dashboard features")
+                # Still show basic dashboard
+                show_basic_dashboard()
+                return
+        except Exception as e:
+            st.warning(f"⚠️ Authentication unavailable: {e}")
+            show_basic_dashboard()
+            return
+    else:
+        st.info("🏠 Running in Local Mode - Authentication disabled")
+        show_basic_dashboard()
         return
     
-    # Sidebar with Google Cloud Status
-    display_google_cloud_status()
+    # Sidebar with Google Cloud Status (only if enhanced features available)
+    if ENHANCED_FEATURES_AVAILABLE:
+        display_google_cloud_status()
+    else:
+        display_local_status()
     
     # Main content tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([

@@ -376,6 +376,75 @@ class ModernFinancialDashboard:
                         f"Hourly: {quota_status['hourly_used']}/{quota_status['hourly_limit']}\n\n"
                         f"Please wait before generating more insights.")
         
+        # Interactive AI Chat Section
+        st.markdown("---")
+        st.subheader("💬 Ask AI About Your Finances")
+        
+        user_question = st.text_area(
+            "Ask any financial question:", 
+            placeholder="E.g., 'What's my portfolio allocation?', 'How are my investments performing?', 'What's my risk level?'",
+            height=80
+        )
+        
+        if st.button("🤖 Get AI Answer") and user_question:
+            with st.spinner("🤖 AI is analyzing your data..."):
+                try:
+                    # Get financial context
+                    db = SessionLocal()
+                    recent_data = db.query(MCPData).order_by(MCPData.created_at.desc()).limit(20).all()
+                    recent_insights = db.query(AIInsight).order_by(AIInsight.created_at.desc()).limit(5).all()
+                    
+                    # Prepare context with actual data
+                    financial_context = {
+                        "query": user_question,
+                        "recent_data_count": len(recent_data),
+                        "data_types": list(set([data.data_type for data in recent_data])) if recent_data else [],
+                        "recent_insights": [
+                            {
+                                "title": insight.title,
+                                "type": insight.insight_type,
+                                "content": insight.content[:200] + "..." if len(insight.content) > 200 else insight.content
+                            } for insight in recent_insights
+                        ]
+                    }
+                    
+                    # Add sample data if no real data
+                    if not recent_data:
+                        financial_context["sample_portfolio"] = {
+                            "note": "Sample data - connect Fi MCP server for real data",
+                            "total_value": 100000,
+                            "holdings": [
+                                {"symbol": "AAPL", "shares": 50, "value": 8500},
+                                {"symbol": "GOOGL", "shares": 20, "value": 5000},
+                                {"symbol": "MSFT", "shares": 30, "value": 10000}
+                            ]
+                        }
+                    
+                    db.close()
+                    
+                    # Generate AI response
+                    from services.enhanced_ai_agent import enhanced_ai_agent
+                    
+                    query_lower = user_question.lower()
+                    if "portfolio" in query_lower:
+                        response = enhanced_ai_agent.generate_portfolio_analysis(financial_context)
+                    elif "risk" in query_lower:
+                        response = enhanced_ai_agent.generate_risk_assessment(financial_context)
+                    else:
+                        response = enhanced_ai_agent.generate_market_insight(financial_context)
+                    
+                    st.success("🤖 AI Response:")
+                    st.write(response)
+                    
+                    with st.expander("📊 View Data Context"):
+                        st.json(financial_context)
+                        
+                except Exception as e:
+                    st.error(f"❌ AI analysis error: {e}")
+                    st.info("Make sure your Google API key is configured in the .env file")
+
+        st.markdown("---")
+        
         # Get insights
         recent_insights = insight_generator.get_recent_insights(limit=50)
         
