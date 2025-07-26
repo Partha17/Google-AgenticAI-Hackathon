@@ -108,14 +108,7 @@ class ModernFinancialDashboard:
             
             # Handle different data structures
             if isinstance(record_data, dict):
-                # Check if it's the raw response format
-                if 'data' in record_data and 'content' in record_data['data']:
-                    # Parse the JSON content
-                    content = record_data['data']['content'][0]['text']
-                    parsed_data = json.loads(content)
-                    return parsed_data
-                else:
-                    return record_data
+                return record_data
             
             # Try to parse as JSON string
             if isinstance(record_data, str):

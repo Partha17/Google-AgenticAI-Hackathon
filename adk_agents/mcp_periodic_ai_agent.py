@@ -622,8 +622,12 @@ class MCPPeriodicAIAgent(AIAnalysisBase):
     def test_mcp_connection(self) -> bool:
         """Test connection to Fi MCP server"""
         try:
-            # Try a simple authentication test
-            return self.mcp_client.authenticate()
+            # Use the new thread-safe authentication
+            if self.mcp_client.ensure_authenticated():
+                # Try to get some data to verify connection works
+                test_data = self.mcp_client.get_financial_data()
+                return test_data.get("success", False)
+            return False
         except Exception as e:
             logger.error(f"MCP connection test failed: {e}")
             return False

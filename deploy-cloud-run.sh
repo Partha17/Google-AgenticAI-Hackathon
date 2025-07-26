@@ -53,7 +53,7 @@ gcloud run deploy $SERVICE_NAME \
     --cpu 1 \
     --timeout 300 \
     --max-instances 10 \
-    --set-env-vars "LOG_LEVEL=INFO,GOOGLE_GENAI_USE_VERTEXAI=1,GOOGLE_CLOUD_LOCATION=$REGION"
+    --set-env-vars "LOG_LEVEL=INFO,GOOGLE_GENAI_USE_VERTEXAI=1,GOOGLE_CLOUD_LOCATION=$REGION,MCP_SERVER_URL=https://fi-mcp-server-bpzxyhr4dq-uc.a.run.app"
 
 # Get the service URL
 SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.url)")
