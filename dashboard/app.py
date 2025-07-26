@@ -162,18 +162,36 @@ class ModernFinancialDashboard:
                     summary["total_liabilities"] = total_liabilities
                 
                 # Extract bank balance from account details
+                bank_balance = 0
+                
+                # First try to get bank balance from net worth data
                 if 'accountDetailsBulkResponse' in nw_data:
-                    bank_balance = 0
                     account_map = nw_data['accountDetailsBulkResponse']['accountDetailsMap']
                     for account_id, account_info in account_map.items():
                         if 'depositSummary' in account_info:
                             balance = int(account_info['depositSummary']['currentBalance']['units'])
                             bank_balance += balance
-                    summary["bank_balance"] = bank_balance
+                
+                # If no bank balance found in net worth data, try bank_transactions data
+                if bank_balance == 0:
+                    latest_bank = db.query(MCPData).filter(
+                        MCPData.data_type == "bank_transactions"
+                    ).order_by(MCPData.timestamp.desc()).first()
+                    
+                    if latest_bank:
+                        bank_data = self.extract_financial_data(latest_bank)
+                        if 'accountDetailsBulkResponse' in bank_data:
+                            account_map = bank_data['accountDetailsBulkResponse']['accountDetailsMap']
+                            for account_id, account_info in account_map.items():
+                                if 'depositSummary' in account_info:
+                                    balance = int(account_info['depositSummary']['currentBalance']['units'])
+                                    bank_balance += balance
+                
+                summary["bank_balance"] = bank_balance if bank_balance > 0 else "Not Available"
                 
                 summary["last_updated"] = latest_nw.timestamp.strftime("%Y-%m-%d %H:%M")
             
-            # Get credit score
+            # Get credit score (currently not available in MCP response)
             latest_credit = db.query(MCPData).filter(
                 MCPData.data_type == "credit_report"
             ).order_by(MCPData.timestamp.desc()).first()
@@ -184,8 +202,11 @@ class ModernFinancialDashboard:
                     credit_report = credit_data['creditReports'][0]
                     if 'creditReportData' in credit_report and 'score' in credit_report['creditReportData']:
                         summary["credit_score"] = int(credit_report['creditReportData']['score']['bureauScore'])
+            else:
+                # Credit score not available in current MCP response
+                summary["credit_score"] = "Not Available"
             
-            # Get EPF balance
+            # Get EPF balance (currently not available in MCP response)
             latest_epf = db.query(MCPData).filter(
                 MCPData.data_type == "epf_details"
             ).order_by(MCPData.timestamp.desc()).first()
@@ -197,6 +218,9 @@ class ModernFinancialDashboard:
                     if 'rawDetails' in uan_account and 'overall_pf_balance' in uan_account['rawDetails']:
                         pf_balance = uan_account['rawDetails']['overall_pf_balance']
                         summary["epf_balance"] = int(pf_balance['current_pf_balance'])
+            else:
+                # EPF balance not available in current MCP response
+                summary["epf_balance"] = "Not Available"
         
         except Exception as e:
             st.error(f"Error getting financial summary: {e}")

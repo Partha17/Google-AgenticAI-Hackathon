@@ -59,10 +59,8 @@ class RealDataCollector:
                 # Store different data types from the comprehensive response
                 data_types_to_extract = [
                     ("net_worth", "netWorthResponse"),
-                    ("credit_report", "creditReports"), 
-                    ("epf_details", "uanAccounts"),
                     ("bank_transactions", "accountDetailsBulkResponse"),
-                    ("mutual_fund_transactions", "mfTransactionResponse")
+                    ("mutual_fund_transactions", "mfSchemeAnalytics")
                 ]
                 
                 for data_type, key in data_types_to_extract:

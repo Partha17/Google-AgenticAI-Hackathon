@@ -156,6 +156,7 @@ def get_adk_logger() -> logging.Logger:
     return get_logger('adk.orchestrator')
 
 def get_data_logger() -> logging.Logger:
+    
     return get_logger('data.collector')
 
 def get_ai_logger() -> logging.Logger:
