@@ -177,3 +177,7 @@ Thumbs.db
 
 # ADK specific files
 .adk/ 
+# Logs
+logs/
+*.log
+financial_system.log*

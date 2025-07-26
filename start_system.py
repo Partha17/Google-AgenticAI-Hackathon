@@ -1,32 +1,60 @@
 #!/usr/bin/env python3
 """
 Complete System Startup Script for Enhanced Financial Multi-Agent System
-Manages Fi MCP Server, ADK Agents, and Dashboard with proper process control
+Auto-creates virtual environment, installs dependencies, and starts all services
 """
 
 import subprocess
 import sys
 import os
 import time
-import signal
 import threading
-import json
-import requests
+import signal
 from pathlib import Path
-from typing import Dict, List, Optional
+import argparse
+
+# Add logging support
+from services.logger_config import setup_logging, get_logger, log_startup, log_shutdown, log_error
 
 class SystemManager:
+    """Enhanced system manager for Financial Multi-Agent System with auto-setup"""
+    
     def __init__(self):
-        self.processes = {}
+        # Setup logging first
+        setup_logging()
+        self.logger = get_logger('system.manager')
+        
+        self.project_root = Path(__file__).parent
+        self.venv_path = self.project_root / "venv"
         self.mcp_port = 8080
         self.dashboard_port = 8501
-        self.project_root = Path.cwd()
-        self.venv_path = self.project_root / "venv"
+        self.processes = {}
+        self.force_reinstall = False
         
+        # Setup signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        
+        log_startup('SystemManager', 'System manager initialized')
+    
     def log(self, message: str, level: str = "INFO"):
-        """Enhanced logging with timestamps"""
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{timestamp}] {level}: {message}")
+        """Enhanced logging with centralized logger"""
+        if level == "ERROR":
+            self.logger.error(message)
+        elif level == "WARNING":
+            self.logger.warning(message)
+        elif level == "DEBUG":
+            self.logger.debug(message)
+        else:
+            self.logger.info(message)
+    
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals gracefully"""
+        log_shutdown('SystemManager', f'Shutdown signal {signum} received')
+        self.log("🛑 Shutdown signal received, stopping all processes...")
+        self.stop_all_processes()
+        log_shutdown('SystemManager', 'System shutdown completed')
+        sys.exit(0)
     
     def check_port(self, port: int) -> bool:
         """Check if a port is in use"""

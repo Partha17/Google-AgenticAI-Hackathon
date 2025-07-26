@@ -5,8 +5,10 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import time
+from services.logger_config import get_mcp_logger, log_error
 
-logger = logging.getLogger(__name__)
+# Use centralized logger
+logger = get_mcp_logger()
 
 class FiMCPClient:
     """Real Fi MCP client that connects to the Fi MCP development server"""
@@ -16,6 +18,7 @@ class FiMCPClient:
         self.mcp_url = f"{base_url}/mcp/stream"
         self.session_id = None
         self.authenticated = False
+        logger.info(f"Fi MCP Client initialized with base URL: {base_url}")
         
         # Test phone numbers from the Fi MCP server documentation
         self.test_users = {
@@ -75,6 +78,7 @@ class FiMCPClient:
                 
         except requests.exceptions.RequestException as e:
             logger.error(f"MCP request failed: {e}")
+            log_error('mcp.client', e, f"MCP request to {method}")
             return {"error": str(e)}
     
     def authenticate(self, phone_number: str = "2222222222") -> bool:

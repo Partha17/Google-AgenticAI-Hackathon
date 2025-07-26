@@ -8,8 +8,10 @@ from datetime import datetime
 import json
 from langchain_google_genai import ChatGoogleGenerativeAI
 from config import settings
+from services.logger_config import get_ai_logger, log_error
 
-logger = logging.getLogger(__name__)
+# Use centralized logger
+logger = get_ai_logger()
 
 class EnhancedAIAgent:
     """Enhanced AI agent for financial analysis using Google's Gemini"""

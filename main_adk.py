@@ -11,13 +11,12 @@ import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Import centralized logging
+from services.logger_config import setup_logging, get_adk_logger, log_startup, log_shutdown, log_error
 
-logger = logging.getLogger(__name__)
+# Setup centralized logging
+setup_logging()
+logger = get_adk_logger()
 
 # Import ADK agents
 try:
@@ -706,11 +705,13 @@ financial_assistant = FinancialAssistantAgent()
 async def main():
     """Main function for ADK compatibility"""
     try:
+        log_startup('ADK.System', 'Financial Assistant Agent starting')
         logger.info("🚀 Starting Financial Assistant Agent...")
         
         # Initialize the agent
         if await financial_assistant.initialize():
             logger.info("✅ Financial Assistant Agent ready!")
+            log_startup('ADK.Agent', 'Financial Assistant Agent initialized successfully')
             
             # Keep the agent running
             while True:
@@ -718,6 +719,7 @@ async def main():
                     # In a real ADK setup, this would be handled by the ADK framework
                     await asyncio.sleep(1)
                 except KeyboardInterrupt:
+                    log_shutdown('ADK.Agent', 'Shutdown signal received')
                     logger.info("👋 Shutting down Financial Assistant Agent...")
                     break
         else:

@@ -11,6 +11,9 @@ from typing import Dict, Any, List
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Import logging
+from services.logger_config import get_dashboard_logger, log_error
+
 from models.database import SessionLocal, AIInsight, MCPData, create_tables
 from services.insight_generator import insight_generator
 from services.real_data_collector import real_data_collector
@@ -390,9 +393,11 @@ class ModernFinancialDashboard:
             with st.spinner("🤖 AI is analyzing your data..."):
                 try:
                     # Get financial context
+                    self.logger.info(f"Processing AI query: {user_question[:50]}...")
                     db = SessionLocal()
                     recent_data = db.query(MCPData).order_by(MCPData.created_at.desc()).limit(20).all()
                     recent_insights = db.query(AIInsight).order_by(AIInsight.created_at.desc()).limit(5).all()
+                    self.logger.debug(f"Found {len(recent_data)} data records, {len(recent_insights)} insights")
                     
                     # Extract actual financial values from database
                     def extract_financial_values(mcp_data):
