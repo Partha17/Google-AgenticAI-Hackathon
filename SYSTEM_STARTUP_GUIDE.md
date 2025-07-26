@@ -46,8 +46,13 @@ python start_system.py --monitor
 # Enhanced dashboard with monitoring
 python start_system.py --dashboard enhanced --monitor
 
-# Cleanup only (kill existing processes)
-python start_system.py --cleanup-only
+# Environment setup options
+python start_system.py --setup-only              # Setup venv + dependencies only
+python start_system.py --force-reinstall         # Force reinstall dependencies
+python start_system.py --cleanup-only            # Kill existing processes only
+
+# Combined options
+python start_system.py --dashboard enhanced --force-reinstall
 ```
 
 ### **Shell Wrapper Options**
@@ -56,6 +61,8 @@ python start_system.py --cleanup-only
 ./start.sh --dashboard enhanced
 ./start.sh --monitor
 ./start.sh --cleanup-only
+./start.sh --setup-only
+./start.sh --force-reinstall
 ```
 
 ## 📊 System Components Started
@@ -66,13 +73,16 @@ python start_system.py --cleanup-only
 | **ADK Agents** | - | Multi-agent AI system | Process monitoring |
 | **Dashboard** | 8501 | Web interface | HTTP endpoint |
 
-## ✅ System Requirements Check
+## ✅ Automatic Environment Setup
 
-The script automatically verifies:
-- ✅ **Go Installation** - Required for Fi MCP server
-- ✅ **Python Environment** - Virtual environment check
-- ✅ **Port Availability** - Clears conflicts automatically
-- ✅ **Directory Structure** - Validates project layout
+The script automatically handles:
+- ✅ **Virtual Environment** - Creates `venv/` if not exists
+- ✅ **Dependencies** - Installs from `requirements.txt` automatically
+- ✅ **Go Installation** - Verifies Go for Fi MCP server
+- ✅ **Port Management** - Clears conflicts automatically
+- ✅ **System Validation** - Checks project structure
+
+**Zero Configuration Required** - Just run `./start.sh` on any machine!
 
 ## 🔄 Process Flow
 
@@ -109,18 +119,27 @@ graph TD
 [2024-01-26 14:30:00] INFO: 🚀 Starting Enhanced Financial Multi-Agent System
 [2024-01-26 14:30:00] INFO: 🧹 Cleaning up existing processes...
 [2024-01-26 14:30:02] INFO: ✅ Cleanup completed
-[2024-01-26 14:30:02] INFO: ✅ Go found: go version go1.21.0 darwin/arm64
-[2024-01-26 14:30:02] INFO: 🚀 Starting Fi MCP Server...
-[2024-01-26 14:30:05] INFO: ✅ Fi MCP Server started on port 8080
-[2024-01-26 14:30:05] INFO: ✅ Fi MCP Server responding at http://localhost:8080/
-[2024-01-26 14:30:05] INFO: 🤖 Starting ADK Multi-Agent System...
-[2024-01-26 14:30:08] INFO: ✅ ADK Multi-Agent System started successfully
-[2024-01-26 14:30:08] INFO: 📊 Starting Original Dashboard...
-[2024-01-26 14:30:15] INFO: ✅ Original Dashboard started on http://localhost:8501
-[2024-01-26 14:30:15] INFO: 🎉 System started successfully!
-[2024-01-26 14:30:15] INFO: 📊 Dashboard: http://localhost:8501
-[2024-01-26 14:30:15] INFO: 🔌 Fi MCP Server: http://localhost:8080
-[2024-01-26 14:30:15] INFO: 🤖 ADK Agents: Running
+[2024-01-26 14:30:02] INFO: 🔧 Setting up Python environment...
+[2024-01-26 14:30:02] INFO: 📦 Virtual environment not found. Creating...
+[2024-01-26 14:30:03] INFO: 🔧 Creating virtual environment...
+[2024-01-26 14:30:05] INFO: ✅ Virtual environment created successfully
+[2024-01-26 14:30:05] INFO: 📦 Installing dependencies...
+[2024-01-26 14:30:05] INFO: 📥 Installing dependencies from requirements.txt...
+[2024-01-26 14:30:05] INFO: 🔄 Upgrading pip...
+[2024-01-26 14:30:35] INFO: ✅ Dependencies installed successfully
+[2024-01-26 14:30:35] INFO: ✅ Python environment ready
+[2024-01-26 14:30:35] INFO: ✅ Go found: go version go1.21.0 darwin/arm64
+[2024-01-26 14:30:35] INFO: 🚀 Starting Fi MCP Server...
+[2024-01-26 14:30:38] INFO: ✅ Fi MCP Server started on port 8080
+[2024-01-26 14:30:38] INFO: ✅ Fi MCP Server responding at http://localhost:8080/
+[2024-01-26 14:30:38] INFO: 🤖 Starting ADK Multi-Agent System...
+[2024-01-26 14:30:41] INFO: ✅ ADK Multi-Agent System started successfully
+[2024-01-26 14:30:41] INFO: 📊 Starting Original Dashboard...
+[2024-01-26 14:30:48] INFO: ✅ Original Dashboard started on http://localhost:8501
+[2024-01-26 14:30:48] INFO: 🎉 System started successfully!
+[2024-01-26 14:30:48] INFO: 📊 Dashboard: http://localhost:8501
+[2024-01-26 14:30:48] INFO: 🔌 Fi MCP Server: http://localhost:8080
+[2024-01-26 14:30:48] INFO: 🤖 ADK Agents: Running
 ```
 
 ## 🛠 Troubleshooting
@@ -144,11 +163,12 @@ python start_system.py --cleanup-only
 
 #### **Virtual Environment Issues**
 ```bash
-# Recreate virtual environment
+# Automatic recreation (recommended)
+./start.sh --setup-only --force-reinstall
+
+# Manual recreation
 rm -rf venv
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+python start_system.py --setup-only
 ```
 
 #### **Permission Denied**
@@ -187,6 +207,15 @@ python start_system.py --monitor
 python start_system.py --dashboard enhanced
 ```
 
+### **Environment Setup Only**
+```bash
+# Setup environment without starting services
+python start_system.py --setup-only
+
+# Force reinstall all dependencies
+python start_system.py --setup-only --force-reinstall
+```
+
 ### **Background Execution**
 ```bash
 # Run in background (use with caution)
@@ -222,17 +251,19 @@ python start_system.py --cleanup-only
 ## 🚀 Quick Commands Summary
 
 ```bash
-# Start everything (recommended)
+# Start everything (recommended - auto-creates venv if needed)
 ./start.sh
 
 # Start with enhanced dashboard
 ./start.sh --dashboard enhanced
 
-# Start with monitoring
-./start.sh --monitor
+# Environment setup options
+./start.sh --setup-only                    # Setup venv + dependencies only
+./start.sh --setup-only --force-reinstall  # Force reinstall everything
 
-# Cleanup existing processes
-./start.sh --cleanup-only
+# Advanced options
+./start.sh --monitor                       # With process monitoring
+./start.sh --cleanup-only                  # Kill existing processes only
 
 # Get help
 python start_system.py --help

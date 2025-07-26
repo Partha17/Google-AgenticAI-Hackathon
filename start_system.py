@@ -97,19 +97,115 @@ class SystemManager:
         self.log("❌ Go not found. Please install Go to run Fi MCP server", "ERROR")
         return False
     
-    def check_python_environment(self) -> bool:
-        """Check Python virtual environment"""
+    def check_python_environment(self, force_reinstall: bool = False) -> bool:
+        """Check and setup Python virtual environment"""
         if not self.venv_path.exists():
-            self.log("❌ Virtual environment not found. Run: python -m venv venv", "ERROR")
-            return False
+            self.log("📦 Virtual environment not found. Creating...")
+            if not self.create_virtual_environment():
+                return False
         
-        # Check if we're in the venv
-        if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-            self.log("✅ Virtual environment active")
-            return True
+        # Check if requirements are installed
+        if not self.check_dependencies(force_reinstall):
+            self.log("📦 Installing dependencies...")
+            if not self.install_dependencies():
+                return False
+        
+        self.log("✅ Python environment ready")
+        return True
+    
+    def create_virtual_environment(self) -> bool:
+        """Create a new virtual environment"""
+        try:
+            self.log("🔧 Creating virtual environment...")
+            result = subprocess.run([sys.executable, "-m", "venv", "venv"], 
+                                  capture_output=True, text=True, cwd=self.project_root)
+            
+            if result.returncode == 0:
+                self.log("✅ Virtual environment created successfully")
+                return True
+            else:
+                self.log(f"❌ Failed to create virtual environment: {result.stderr}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Error creating virtual environment: {e}", "ERROR")
+            return False
+    
+    def get_venv_python(self) -> str:
+        """Get the path to the Python executable in the venv"""
+        if sys.platform == "win32":
+            return str(self.venv_path / "Scripts" / "python.exe")
         else:
-            self.log("⚠️  Virtual environment not activated", "WARNING")
-            return True  # We can still try to run
+            return str(self.venv_path / "bin" / "python")
+    
+    def get_venv_pip(self) -> str:
+        """Get the path to pip in the venv"""
+        if sys.platform == "win32":
+            return str(self.venv_path / "Scripts" / "pip.exe")
+        else:
+            return str(self.venv_path / "bin" / "pip")
+    
+    def check_dependencies(self, force_reinstall: bool = False) -> bool:
+        """Check if key dependencies are installed"""
+        if force_reinstall:
+            self.log("🔄 Force reinstall requested, skipping dependency check")
+            return False
+            
+        try:
+            venv_python = self.get_venv_python()
+            
+            # Check for key packages
+            key_packages = ["streamlit", "langchain", "requests"]
+            
+            for package in key_packages:
+                result = subprocess.run([venv_python, "-c", f"import {package}"], 
+                                      capture_output=True, text=True)
+                if result.returncode != 0:
+                    self.log(f"📦 Missing package: {package}")
+                    return False
+            
+            self.log("✅ Dependencies already installed")
+            return True
+            
+        except Exception as e:
+            self.log(f"⚠️  Error checking dependencies: {e}", "WARNING")
+            return False
+    
+    def install_dependencies(self) -> bool:
+        """Install dependencies from requirements.txt"""
+        try:
+            requirements_file = self.project_root / "requirements.txt"
+            
+            if not requirements_file.exists():
+                self.log("⚠️  requirements.txt not found, skipping dependency installation", "WARNING")
+                return True
+            
+            venv_pip = self.get_venv_pip()
+            
+            self.log("📥 Installing dependencies from requirements.txt...")
+            
+            # Upgrade pip first
+            self.log("🔄 Upgrading pip...")
+            result = subprocess.run([venv_pip, "install", "--upgrade", "pip"], 
+                                  capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                self.log(f"⚠️  Warning: Could not upgrade pip: {result.stderr}", "WARNING")
+            
+            # Install requirements
+            result = subprocess.run([venv_pip, "install", "-r", str(requirements_file)], 
+                                  capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                self.log("✅ Dependencies installed successfully")
+                return True
+            else:
+                self.log(f"❌ Failed to install dependencies: {result.stderr}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Error installing dependencies: {e}", "ERROR")
+            return False
     
     def start_fi_mcp_server(self) -> bool:
         """Start the Fi MCP server"""
@@ -188,13 +284,16 @@ class SystemManager:
         self.log("🤖 Starting ADK Multi-Agent System...")
         
         try:
+            # Use venv Python if available
+            python_executable = self.get_venv_python() if self.venv_path.exists() else sys.executable
+            
             # Prepare environment
             env = os.environ.copy()
             env["PYTHONPATH"] = str(self.project_root) + ":" + env.get("PYTHONPATH", "")
             
             # Start ADK system
             process = subprocess.Popen(
-                [sys.executable, "main_adk.py"],
+                [python_executable, "main_adk.py"],
                 cwd=self.project_root,
                 env=env,
                 stdout=subprocess.PIPE,
@@ -227,13 +326,16 @@ class SystemManager:
         dashboard_file = "dashboard/enhanced_dashboard.py" if dashboard_type == "enhanced" else "dashboard/app.py"
         
         try:
+            # Use venv Python if available
+            python_executable = self.get_venv_python() if self.venv_path.exists() else sys.executable
+            
             # Prepare environment
             env = os.environ.copy()
             env["PYTHONPATH"] = str(self.project_root) + ":" + env.get("PYTHONPATH", "")
             
             # Start dashboard
             process = subprocess.Popen([
-                sys.executable, "-m", "streamlit", "run", dashboard_file,
+                python_executable, "-m", "streamlit", "run", dashboard_file,
                 f"--server.port={self.dashboard_port}",
                 "--server.headless=true",
                 "--server.fileWatcherType=none"
@@ -302,8 +404,10 @@ class SystemManager:
         self.log("🚀 Starting Enhanced Financial Multi-Agent System")
         self.log("=" * 60)
         
-        # Preliminary checks
-        if not self.check_python_environment():
+        # Environment setup and checks
+        self.log("🔧 Setting up Python environment...")
+        if not self.check_python_environment(getattr(self, 'force_reinstall', False)):
+            self.log("❌ Failed to setup Python environment", "ERROR")
             return False
         
         # Cleanup existing processes
@@ -352,6 +456,10 @@ def main():
                        help="Enable process monitoring")
     parser.add_argument("--cleanup-only", action="store_true",
                        help="Only cleanup existing processes and exit")
+    parser.add_argument("--force-reinstall", action="store_true",
+                       help="Force reinstall dependencies even if they exist")
+    parser.add_argument("--setup-only", action="store_true",
+                       help="Only setup environment (venv + dependencies) and exit")
     
     args = parser.parse_args()
     
@@ -361,7 +469,17 @@ def main():
         manager.cleanup_existing_processes()
         return
     
+    if args.setup_only:
+        manager.force_reinstall = args.force_reinstall
+        if manager.check_python_environment(args.force_reinstall):
+            manager.log("✅ Environment setup completed successfully!")
+        else:
+            manager.log("❌ Environment setup failed!", "ERROR")
+        return
+    
     try:
+        # Set force reinstall flag
+        manager.force_reinstall = args.force_reinstall
         success = manager.start_system(args.dashboard)
         
         if success and args.monitor:
