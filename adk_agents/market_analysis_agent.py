@@ -254,7 +254,7 @@ class MarketAnalysisAgent(AIAnalysisBase):
             
             2. **Market Regime Forecasting**:
                - Expected market volatility levels
-               - Risk sentiment evolution
+               - Risk sentiment evolutionhy2ty
                - Sector leadership expectations
                - Style preferences (growth vs value)
                - Geographic market performance expectations

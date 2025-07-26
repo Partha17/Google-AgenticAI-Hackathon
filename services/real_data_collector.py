@@ -97,7 +97,8 @@ class RealDataCollector:
                 "bank_transactions": self.mcp_client.fetch_bank_transactions,
                 "mutual_fund_transactions": self.mcp_client.fetch_mutual_fund_transactions,
                 "epf_details": self.mcp_client.fetch_epf_details,
-                "credit_report": self.mcp_client.fetch_credit_report
+                "credit_report": self.mcp_client.fetch_credit_report,
+                "stock_transactions": self.mcp_client.fetch_stock_transactions
             }
             
             if data_type not in data_fetchers:

@@ -28,13 +28,14 @@ class FiMCPClient:
             "1616161616": "Early Retirement Dreamer - High savings rate"
         }
         
-        # Available MCP tools
+        # Available MCP tools (matching server tool names)
         self.available_tools = [
             "fetch_net_worth",
             "fetch_bank_transactions", 
-            "fetch_mutual_fund_transactions",
+            "fetch_mf_transactions",
             "fetch_epf_details",
-            "fetch_credit_report"
+            "fetch_credit_report",
+            "fetch_stock_transactions"
         ]
         
     def _generate_session_id(self) -> str:
@@ -208,7 +209,7 @@ class FiMCPClient:
                 return {"error": "Authentication required"}
         
         result = self._make_mcp_request("tools/call", {
-            "name": "fetch_mutual_fund_transactions", 
+            "name": "fetch_mf_transactions", 
             "arguments": {}
         })
         
@@ -259,6 +260,29 @@ class FiMCPClient:
                 })
         
         return self._process_mcp_response(result, "credit_report")
+    
+    def fetch_stock_transactions(self) -> Dict[str, Any]:
+        """Fetch stock transaction data from Fi MCP"""
+        if not self.authenticated:
+            if not self.authenticate():
+                return {"error": "Authentication required"}
+        
+        result = self._make_mcp_request("tools/call", {
+            "name": "fetch_stock_transactions",
+            "arguments": {}
+        })
+        
+        # Check if login is required and re-authenticate
+        if "login_url" in str(result):
+            logger.info("Re-authentication required for stock_transactions")
+            self.authenticated = False
+            if self.authenticate():
+                result = self._make_mcp_request("tools/call", {
+                    "name": "fetch_stock_transactions",
+                    "arguments": {}
+                })
+        
+        return self._process_mcp_response(result, "stock_transactions")
     
     def _process_mcp_response(self, result: Dict, data_type: str) -> Dict[str, Any]:
         """Process MCP response into standardized format"""

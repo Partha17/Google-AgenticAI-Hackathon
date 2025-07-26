@@ -1,35 +1,43 @@
 #!/usr/bin/env python3
 """
-Dashboard Launcher for Enhanced Financial Multi-Agent System
-Provides options to run different dashboard configurations
+Simplified Dashboard Launcher for Financial Multi-Agent System
+Launches the optimized financial dashboard
 """
 
 import subprocess
 import sys
-import os
 import time
 import argparse
+import psutil
+import os
 from pathlib import Path
 
-def check_port(port):
-    """Check if a port is available"""
-    import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(('localhost', port))
-    sock.close()
-    return result == 0
+def log(message: str, level: str = "INFO"):
+    """Simple logging"""
+    timestamp = time.strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}")
+
+def check_port(port: int) -> bool:
+    """Check if a port is in use"""
+    for conn in psutil.net_connections():
+        if conn.laddr.port == port:
+            return True
+    return False
 
 def kill_streamlit_processes():
-    """Kill any existing streamlit processes"""
-    try:
-        if sys.platform == "darwin":  # macOS
-            subprocess.run("pkill -f streamlit", shell=True, capture_output=True)
-        else:  # Linux
-            subprocess.run("pkill streamlit", shell=True, capture_output=True)
-    except:
-        pass
+    """Kill existing streamlit processes"""
+    killed = 0
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if proc.info['name'] == 'streamlit' or (proc.info['cmdline'] and 'streamlit' in ' '.join(proc.info['cmdline'])):
+                proc.kill()
+                killed += 1
+                log(f"Killed streamlit process {proc.pid}")
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    return killed
 
-def check_fi_mcp_server():
+def check_fi_mcp_server() -> bool:
     """Check if Fi MCP server is running"""
     try:
         import requests
@@ -39,154 +47,96 @@ def check_fi_mcp_server():
         return False
 
 def start_fi_mcp_server():
-    """Start the Fi MCP server if not running"""
+    """Start Fi MCP server if not running"""
     if check_fi_mcp_server():
-        print("✅ Fi MCP Server already running on port 8080")
+        log("✅ Fi MCP Server already running")
         return True
     
-    print("🚀 Starting Fi MCP Server...")
-    server_dir = Path("fi-mcp-server")
-    
-    if not server_dir.exists():
-        print("❌ Fi MCP Server directory not found!")
+    log("🚀 Starting Fi MCP Server...")
+    mcp_dir = Path("fi-mcp-server")
+    if not mcp_dir.exists():
+        log("❌ Fi MCP server directory not found")
         return False
     
-    env = os.environ.copy()
-    env["FI_MCP_PORT"] = "8080"
-    
     try:
-        process = subprocess.Popen(
-            ["go", "run", "main.go"],
-            cwd=server_dir,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
+        env = os.environ.copy()
+        env["FI_MCP_PORT"] = "8080"
+        subprocess.Popen(["go", "run", "main.go"], cwd=mcp_dir, env=env)
         
         # Wait for server to start
         for i in range(10):
-            if check_port(8080):
-                print("✅ Fi MCP Server started on port 8080")
+            if check_fi_mcp_server():
+                log("✅ Fi MCP Server started")
                 return True
             time.sleep(1)
         
-        print("❌ Fi MCP Server failed to start")
-        return False
-        
-    except FileNotFoundError:
-        print("❌ Go not found. Please install Go to run the Fi MCP Server")
-        return False
+        log("⚠️ Fi MCP Server may not be ready yet")
+        return True
     except Exception as e:
-        print(f"❌ Error starting Fi MCP Server: {e}")
+        log(f"❌ Failed to start Fi MCP Server: {e}")
         return False
 
-def launch_dashboard(dashboard_type="original", port=8501, with_mcp=True):
-    """Launch the specified dashboard"""
+def launch_dashboard(port: int = 8501, start_mcp: bool = True):
+    """Launch the financial dashboard"""
+    log("🚀 Financial Dashboard Launcher")
+    log("=" * 50)
     
-    # Kill existing processes
-    kill_streamlit_processes()
-    time.sleep(1)
-    
-    # Choose dashboard file
-    if dashboard_type == "enhanced":
-        dashboard_file = "dashboard/enhanced_dashboard.py"
-        title = "Enhanced Dashboard (Google Cloud)"
-    else:
-        dashboard_file = "dashboard/app.py"
-        title = "Original Dashboard"
-    
-    # Check if we should start Fi MCP server
-    if with_mcp:
+    # Start MCP server if requested
+    if start_mcp:
         start_fi_mcp_server()
     
-    print(f"🎨 Starting {title} on http://localhost:{port}")
+    # Kill existing streamlit processes
+    killed = kill_streamlit_processes()
+    if killed > 0:
+        log(f"🧹 Cleaned up {killed} existing streamlit processes")
+        time.sleep(2)
     
-    # Set environment for proper imports
-    env = os.environ.copy()
-    env["PYTHONPATH"] = os.getcwd() + ":" + env.get("PYTHONPATH", "")
+    # Check if port is still in use
+    if check_port(port):
+        log(f"⚠️ Port {port} is still in use")
+        time.sleep(2)
+    
+    # Launch dashboard
+    log(f"📊 Starting Financial Dashboard on port {port}...")
     
     try:
-        # Start the dashboard
-        cmd = [
-            "streamlit", "run", dashboard_file,
+        subprocess.run([
+            sys.executable, "-m", "streamlit", "run", "dashboard/app.py",
             f"--server.port={port}",
             "--server.headless=false"
-        ]
-        
-        subprocess.run(cmd, env=env)
-        
+        ])
     except KeyboardInterrupt:
-        print("\n🛑 Dashboard stopped by user")
-    except FileNotFoundError:
-        print("❌ Streamlit not found. Please install: pip install streamlit")
+        log("👋 Dashboard stopped by user")
     except Exception as e:
-        print(f"❌ Error starting dashboard: {e}")
+        log(f"❌ Error running dashboard: {e}")
 
 def main():
-    """Main launcher function"""
     parser = argparse.ArgumentParser(description="Launch Financial Dashboard")
-    parser.add_argument(
-        "--dashboard", 
-        choices=["original", "enhanced"], 
-        default="original",
-        help="Choose dashboard type (default: original)"
-    )
-    parser.add_argument(
-        "--port", 
-        type=int, 
-        default=8501,
-        help="Port to run dashboard on (default: 8501)"
-    )
-    parser.add_argument(
-        "--no-mcp", 
-        action="store_true",
-        help="Don't start Fi MCP server"
-    )
-    parser.add_argument(
-        "--interactive", 
-        action="store_true",
-        help="Interactive mode to choose options"
-    )
+    parser.add_argument("--port", type=int, default=8501, help="Port to run dashboard on (default: 8501)")
+    parser.add_argument("--no-mcp", action="store_true", help="Don't start Fi MCP server")
+    parser.add_argument("--interactive", action="store_true", help="Interactive mode")
     
     args = parser.parse_args()
     
-    print("🚀 Financial Dashboard Launcher")
-    print("=" * 50)
-    
-    # Interactive mode
     if args.interactive:
-        print("\nChoose dashboard type:")
-        print("1. Original Dashboard (Stable)")
-        print("2. Enhanced Dashboard (Google Cloud)")
+        print("🎯 Financial Dashboard Launcher")
+        print("=" * 40)
         
-        choice = input("Enter choice (1-2) [1]: ").strip() or "1"
+        # Get port
+        try:
+            port_input = input(f"Port (default: {args.port}): ").strip()
+            port = int(port_input) if port_input else args.port
+        except ValueError:
+            port = args.port
         
-        if choice == "2":
-            dashboard_type = "enhanced"
-        else:
-            dashboard_type = "original"
+        # Start MCP option
+        mcp_input = input("Start Fi MCP server? (Y/n): ").strip().lower()
+        start_mcp = mcp_input != 'n'
         
-        port = input(f"Port number [{args.port}]: ").strip()
-        if port:
-            try:
-                args.port = int(port)
-            except ValueError:
-                print("Invalid port, using default")
-        
-        with_mcp = input("Start Fi MCP Server? [y/N]: ").strip().lower() in ['y', 'yes']
-        
+        print()
+        launch_dashboard(port, start_mcp)
     else:
-        dashboard_type = args.dashboard
-        with_mcp = not args.no_mcp
-    
-    print(f"\nConfiguration:")
-    print(f"📊 Dashboard: {dashboard_type.title()}")
-    print(f"🔌 Port: {args.port}")
-    print(f"🔗 Fi MCP Server: {'Yes' if with_mcp else 'No'}")
-    print()
-    
-    # Launch the dashboard
-    launch_dashboard(dashboard_type, args.port, with_mcp)
+        launch_dashboard(args.port, not args.no_mcp)
 
 if __name__ == "__main__":
     main() 

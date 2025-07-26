@@ -5,16 +5,21 @@ Complete automation script for starting your Enhanced Financial Multi-Agent Syst
 
 ## 📋 What the Script Does
 
-### 🧹 **Automatic Cleanup**
+### 🧹 **Automatic Cleanup & Verification**
 - Kills any existing Fi MCP server processes
 - Terminates running Streamlit dashboards  
 - Cleans up ADK agent processes
 - Clears port conflicts (8080, 8501)
+- **NEW**: Verifies Fi MCP server is actually running and responding
+- **NEW**: Pre-startup Go installation verification
+- **NEW**: Post-startup Fi MCP server health checks
 
-### 🚀 **System Startup**
-1. **Fi MCP Server** - Starts the Go-based financial data server
-2. **ADK Multi-Agent System** - Launches all 5 AI agents
-3. **Dashboard** - Starts the Streamlit web interface
+### 🚀 **Enhanced System Startup**
+1. **Prerequisites Check** - Verifies Go installation and project structure
+2. **Fi MCP Server** - Starts and verifies the Go-based financial data server
+3. **ADK Multi-Agent System** - Launches all 5 AI agents
+4. **Dashboard** - Starts the Streamlit web interface
+5. **Health Verification** - Confirms all components are responding properly
 
 ### 👁️ **Process Management**
 - Monitors all processes
@@ -67,11 +72,11 @@ python start_system.py --dashboard enhanced --force-reinstall
 
 ## 📊 System Components Started
 
-| Component | Port | Description | Status Check |
-|-----------|------|-------------|--------------|
-| **Fi MCP Server** | 8080 | Financial data server | HTTP endpoint |
-| **ADK Agents** | - | Multi-agent AI system | Process monitoring |
-| **Dashboard** | 8501 | Web interface | HTTP endpoint |
+| Component | Port | Description | Status Check | Management |
+|-----------|------|-------------|--------------|------------|
+| **Fi MCP Server** | 8080 | Financial data server | HTTP endpoint + Process | `./check_mcp.sh` |
+| **ADK Agents** | - | Multi-agent AI system | Process monitoring | Built-in monitoring |
+| **Dashboard** | 8501 | Web interface | HTTP endpoint | Built-in verification |
 
 ## ✅ Automatic Environment Setup
 
@@ -151,14 +156,26 @@ graph TD
 # Install Go (macOS)
 brew install go
 
-# Install Go (Linux)
+# Install Go (Linux - Ubuntu/Debian)
 sudo apt install golang-go
+
+# Install Go (Linux - CentOS/RHEL)
+sudo yum install golang
+
+# Verify installation
+go version
 ```
 
 #### **Port Already in Use**
 ```bash
 # Cleanup existing processes
-python start_system.py --cleanup-only
+./start.sh --cleanup-only
+
+# Or specifically for Fi MCP Server
+./check_mcp.sh stop
+
+# Check what's using port 8080
+lsof -ti:8080
 ```
 
 #### **Virtual Environment Issues**
@@ -182,9 +199,15 @@ chmod +x start_system.py start.sh
 If you need to start components individually:
 
 ```bash
-# Fi MCP Server only
+# Fi MCP Server only (recommended method)
+./check_mcp.sh start
+
+# Fi MCP Server (manual method)
 cd fi-mcp-server
 FI_MCP_PORT=8080 go run main.go
+
+# Check Fi MCP Server status
+./check_mcp.sh status
 
 # ADK Agents only  
 python main_adk.py
@@ -265,8 +288,15 @@ python start_system.py --cleanup-only
 ./start.sh --monitor                       # With process monitoring
 ./start.sh --cleanup-only                  # Kill existing processes only
 
+# Fi MCP Server management
+./check_mcp.sh                            # Check MCP server status
+./check_mcp.sh start                      # Start MCP server only
+./check_mcp.sh stop                       # Stop MCP server only
+./check_mcp.sh restart                    # Restart MCP server
+
 # Get help
 python start_system.py --help
+./check_mcp.sh help
 ```
 
 Your Enhanced Financial Multi-Agent System is now ready to run with a single command! 🎉 

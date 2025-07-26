@@ -318,12 +318,12 @@ class SystemManager:
             self.log(f"❌ Error starting ADK agents: {e}", "ERROR")
             return False
     
-    def start_dashboard(self, dashboard_type: str = "original") -> bool:
+    def start_dashboard(self) -> bool:
         """Start the dashboard"""
-        self.log(f"📊 Starting {dashboard_type.title()} Dashboard...")
+        self.log(f"📊 Starting Financial Dashboard...")
         
-        # Choose dashboard file
-        dashboard_file = "dashboard/enhanced_dashboard.py" if dashboard_type == "enhanced" else "dashboard/app.py"
+        # Use the main dashboard
+        dashboard_file = "dashboard/app.py"
         
         try:
             # Use venv Python if available
@@ -346,11 +346,11 @@ class SystemManager:
             # Wait for dashboard to start
             for i in range(20):
                 if self.check_port(self.dashboard_port):
-                    self.log(f"✅ {dashboard_type.title()} Dashboard started on http://localhost:{self.dashboard_port}")
+                    self.log(f"✅ Financial Dashboard started on http://localhost:{self.dashboard_port}")
                     return True
                 time.sleep(1)
             
-            self.log(f"❌ {dashboard_type.title()} Dashboard failed to start", "ERROR")
+            self.log(f"❌ Financial Dashboard failed to start", "ERROR")
             return False
             
         except Exception as e:
@@ -399,106 +399,104 @@ class SystemManager:
         self.cleanup_existing_processes()
         self.log("✅ All processes stopped")
     
-    def start_system(self, dashboard_type: str = "original"):
+    def start_system(self):
         """Start the complete system"""
-        self.log("🚀 Starting Enhanced Financial Multi-Agent System")
-        self.log("=" * 60)
-        
-        # Environment setup and checks
-        self.log("🔧 Setting up Python environment...")
-        if not self.check_python_environment(getattr(self, 'force_reinstall', False)):
-            self.log("❌ Failed to setup Python environment", "ERROR")
-            return False
-        
-        # Cleanup existing processes
-        self.cleanup_existing_processes()
-        
-        # Start components in order
-        success_count = 0
-        total_components = 3
-        
-        # 1. Start Fi MCP Server
-        if self.start_fi_mcp_server():
-            if self.verify_mcp_server():
-                success_count += 1
+        try:
+            self.log("🚀 Starting Enhanced Financial Multi-Agent System")
+            self.log("="*60)
+            
+            # Environment setup
+            if not self.check_python_environment(False):
+                self.log("❌ Environment setup failed", "ERROR")
+                return False
+            
+            # Cleanup existing processes
+            self.cleanup_existing_processes()
+            
+            # Start Fi MCP Server
+            if not self.start_fi_mcp_server():
+                self.log("❌ Failed to start Fi MCP Server")
+                return False
+            
+            # Verify MCP server is responding
+            if not self.verify_mcp_server():
+                self.log("⚠️  MCP Server verification failed")
+            
+            # Start ADK Agents
+            if not self.start_adk_agents():
+                self.log("❌ Failed to start ADK agents")
+                return False
+            
+            # Start Dashboard
+            if self.start_dashboard():
+                self.log("🎉 All services started successfully!")
+                self.log("="*60)
+                self.log(f"📊 Dashboard: http://localhost:{self.dashboard_port}")
+                self.log(f"🔌 Fi MCP Server: http://localhost:{self.mcp_port}")
+                self.log(f"🤖 ADK Agents: Running")
+                self.log("="*60)
+                return True
             else:
-                self.log("⚠️  Fi MCP Server may not be responding properly", "WARNING")
-        
-        # 2. Start ADK Agents
-        if self.start_adk_agents():
-            success_count += 1
-        
-        # 3. Start Dashboard
-        if self.start_dashboard(dashboard_type):
-            success_count += 1
-        
-        # Summary
-        self.log("=" * 60)
-        if success_count == total_components:
-            self.log("🎉 System started successfully!")
-            self.log(f"📊 Dashboard: http://localhost:{self.dashboard_port}")
-            self.log(f"🔌 Fi MCP Server: http://localhost:{self.mcp_port}")
-            self.log("🤖 ADK Agents: Running")
-            self.log("\nPress Ctrl+C to stop all services")
-            return True
-        else:
-            self.log(f"⚠️  Partial success: {success_count}/{total_components} components started")
+                self.log("❌ Failed to start dashboard")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ System startup failed: {e}", "ERROR")
             return False
-
-def main():
-    """Main function"""
-    import argparse
     
-    parser = argparse.ArgumentParser(description="Start Enhanced Financial Multi-Agent System")
-    parser.add_argument("--dashboard", choices=["original", "enhanced"], default="original",
-                       help="Dashboard type to start (default: original)")
-    parser.add_argument("--monitor", action="store_true", 
-                       help="Enable process monitoring")
-    parser.add_argument("--cleanup-only", action="store_true",
-                       help="Only cleanup existing processes and exit")
-    parser.add_argument("--force-reinstall", action="store_true",
-                       help="Force reinstall dependencies even if they exist")
-    parser.add_argument("--setup-only", action="store_true",
-                       help="Only setup environment (venv + dependencies) and exit")
-    
-    args = parser.parse_args()
-    
-    manager = SystemManager()
-    
-    if args.cleanup_only:
-        manager.cleanup_existing_processes()
-        return
-    
-    if args.setup_only:
-        manager.force_reinstall = args.force_reinstall
-        if manager.check_python_environment(args.force_reinstall):
-            manager.log("✅ Environment setup completed successfully!")
-        else:
-            manager.log("❌ Environment setup failed!", "ERROR")
-        return
-    
-    try:
-        # Set force reinstall flag
-        manager.force_reinstall = args.force_reinstall
-        success = manager.start_system(args.dashboard)
+    def main():
+        """Main function"""
+        import argparse
         
-        if success and args.monitor:
-            # Start monitoring in background
-            monitor_thread = threading.Thread(target=manager.monitor_processes, daemon=True)
-            monitor_thread.start()
+        parser = argparse.ArgumentParser(description="Start Enhanced Financial Multi-Agent System")
+# Dashboard option removed - now uses single optimized dashboard
+        parser.add_argument("--monitor", action="store_true", 
+                           help="Enable process monitoring")
+        parser.add_argument("--cleanup-only", action="store_true",
+                           help="Only cleanup existing processes and exit")
+        parser.add_argument("--force-reinstall", action="store_true",
+                           help="Force reinstall dependencies even if they exist")
+        parser.add_argument("--setup-only", action="store_true",
+                           help="Only setup environment (venv + dependencies) and exit")
         
-        if success:
-            # Keep main thread alive
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                pass
-    
-    except KeyboardInterrupt:
-        pass
-    finally:
-        manager.stop_all_processes()
+        args = parser.parse_args()
+        
+        manager = SystemManager()
+        
+        if args.cleanup_only:
+            manager.cleanup_existing_processes()
+            return
+        
+        if args.setup_only:
+            manager.force_reinstall = args.force_reinstall
+            if manager.check_python_environment(args.force_reinstall):
+                manager.log("✅ Environment setup completed successfully!")
+            else:
+                manager.log("❌ Environment setup failed!", "ERROR")
+            return
+        
+        try:
+            # Set force reinstall flag
+            manager.force_reinstall = args.force_reinstall
+            success = manager.start_system()
+            
+            if success and args.monitor:
+                # Start monitoring in background
+                monitor_thread = threading.Thread(target=manager.monitor_processes, daemon=True)
+                monitor_thread.start()
+            
+            if success:
+                # Keep main thread alive
+                try:
+                    while True:
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    pass
+        
+        except KeyboardInterrupt:
+            pass
+        finally:
+            manager.stop_all_processes()
 
 if __name__ == "__main__":
     main() 
