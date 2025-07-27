@@ -9,6 +9,7 @@ import os
 import random
 from typing import Dict, Any, List
 from difflib import get_close_matches
+import logging
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,6 +28,8 @@ try:
     from services.real_data_collector import real_data_collector
     from services.quota_manager import quota_manager
     from adk_agents.mcp_periodic_ai_agent import mcp_periodic_ai_agent
+    from adk_agents.debt_analysis_agent import debt_analysis_agent
+    from adk_agents.subscription_tracking_agent import subscription_tracking_agent
     AI_SERVICES_AVAILABLE = True
 except Exception as e:
     print(f"Warning: AI services not available: {e}")
@@ -62,10 +65,31 @@ except Exception as e:
         def collect_data(self):
             return {"success": False, "error": "AI services not available"}
 
+    class DummyDebtAnalysisAgent:
+        async def analyze_debt_and_budget(self, phone_number: str = None):
+            return {
+                "error": "AI services not available",
+                "debt_summary": {},
+                "budget_analysis": {},
+                "recommendations": []
+            }
+
+    class DummySubscriptionTrackingAgent:
+        async def analyze_subscriptions(self, transaction_data):
+            return {
+                "error": "AI services not available",
+                "subscriptions": [],
+                "usage_analysis": {},
+                "cost_analysis": {},
+                "recommendations": []
+            }
+
     insight_generator = DummyInsightGenerator()
     quota_manager = DummyQuotaManager()
     mcp_periodic_ai_agent = DummyMCPAgent()
     real_data_collector = DummyDataCollector()
+    debt_analysis_agent = DummyDebtAnalysisAgent()
+    subscription_tracking_agent = DummySubscriptionTrackingAgent()
 
 # Page configuration
 st.set_page_config(
@@ -138,13 +162,21 @@ st.markdown("""
 
 class ModernFinancialDashboard:
     def __init__(self):
-        self.logger = get_dashboard_logger()
+        """Initialize the dashboard"""
+        self.logger = logging.getLogger(__name__)
         self.logger.info("Dashboard initialized")
-        create_tables()
 
-        # Disable Fi MCP authentication for this use case
-        self.mcp_enabled = False
-        self.logger.info("Fi MCP authentication disabled - using mock data mode")
+        # MCP configuration
+        self.mcp_enabled = True  # Enable MCP for deployed server
+        self.logger.info("Fi MCP authentication enabled - using deployed server")
+
+        # Initialize session state for phone number
+        if 'phone_number' not in st.session_state:
+            st.session_state.phone_number = None
+        if 'data_fetched' not in st.session_state:
+            st.session_state.data_fetched = False
+        if 'mcp_client' not in st.session_state:
+            st.session_state.mcp_client = None
 
     def extract_financial_data(self, mcp_record) -> Dict[str, Any]:
         """Extract financial data from MCP record with proper parsing"""
@@ -155,14 +187,20 @@ class ModernFinancialDashboard:
             # Get the data from the record
             record_data = mcp_record.get_data()
 
-            # Handle different data structures
+            # The data is stored as the processed response from MCP client
+            # It should have the structure: {"success": True, "data": {...}, "data_type": "...", ...}
             if isinstance(record_data, dict):
-                # Check if it's the raw response format
-                if 'data' in record_data and 'content' in record_data['data']:
-                    # Parse the JSON content
+                # If it's the processed response from MCP client
+                if "success" in record_data and "data" in record_data:
+                    # Return the actual data portion
+                    return record_data["data"]
+                # If it's already the raw data (direct format)
+                elif 'netWorthResponse' in record_data or 'accountDetailsBulkResponse' in record_data:
+                    return record_data
+                # If it's the old format with nested content
+                elif 'data' in record_data and 'content' in record_data['data']:
                     content = record_data['data']['content'][0]['text']
-                    parsed_data = json.loads(content)
-                    return parsed_data
+                    return json.loads(content)
                 else:
                     return record_data
 
@@ -175,10 +213,43 @@ class ModernFinancialDashboard:
             st.error(f"Error parsing financial data: {e}")
             return {}
 
+    def _initialize_mcp_and_fetch_data(self):
+        """Initialize MCP client and fetch data for the current phone number"""
+        try:
+            from services.fi_mcp_client import FiMCPClient
+            from services.real_data_collector import RealDataCollector
+
+            # Initialize MCP client with the phone number
+            mcp_client = FiMCPClient()
+
+            # Authenticate with the phone number
+            if mcp_client.authenticate(st.session_state.phone_number):
+                st.session_state.mcp_client = mcp_client
+
+                # Initialize data collector and fetch data
+                data_collector = RealDataCollector()
+
+                with st.spinner(f"🔍 Fetching financial data for {st.session_state.phone_number}..."):
+                    # Test connection first
+                    if data_collector.test_mcp_connection():
+                        # Collect all data
+                        data_collector.collect_data()
+                        st.session_state.data_fetched = True
+                        st.success(f"✅ Successfully fetched data for {st.session_state.phone_number}")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to connect to MCP server")
+            else:
+                st.error(f"❌ Authentication failed for phone number: {st.session_state.phone_number}")
+
+        except Exception as e:
+            st.error(f"❌ Error initializing MCP client: {e}")
+            self.logger.error(f"Error initializing MCP client: {e}")
+
     def get_parsed_financial_summary(self) -> Dict[str, Any]:
         """Get financial summary - uses mock data when MCP is disabled"""
-        if not self.mcp_enabled:
-            # Return mock data when MCP is disabled
+        if not self.mcp_enabled or not st.session_state.data_fetched:
+            # Return mock data when MCP is disabled or data not fetched
             return {
                 "net_worth": 2500000,
                 "total_assets": 3200000,
@@ -202,13 +273,19 @@ class ModernFinancialDashboard:
         }
 
         try:
-            # Get net worth data
+            # Get net worth data for the specific phone number
             latest_nw = db.query(MCPData).filter(
                 MCPData.data_type == "net_worth"
             ).order_by(MCPData.timestamp.desc()).first()
 
             if latest_nw:
                 nw_data = self.extract_financial_data(latest_nw)
+
+                # Debug: Log the data structure
+                self.logger.info(f"Extracted net worth data structure: {type(nw_data)}")
+                if isinstance(nw_data, dict):
+                    self.logger.info(f"Net worth data keys: {list(nw_data.keys())}")
+
                 if 'netWorthResponse' in nw_data:
                     net_worth_response = nw_data['netWorthResponse']
 
@@ -276,6 +353,64 @@ class ModernFinancialDashboard:
 
     def main(self):
         """Main dashboard interface"""
+        st.set_page_config(
+            page_title="FinGenie - AI-Powered Financial Dashboard",
+            page_icon="💰",
+            layout="wide",
+            initial_sidebar_state="expanded"
+        )
+
+        # Phone number input section
+        st.header("📱 Fi MCP Data Connection")
+        st.markdown("Enter your phone number to fetch financial data from Fi MCP server")
+
+        col1, col2, col3 = st.columns([2, 1, 1])
+
+        with col1:
+            phone_input = st.text_input(
+                "Phone Number (10 digits)",
+                value=st.session_state.phone_number or "",
+                placeholder="Enter 10-digit phone number",
+                max_chars=10,
+                help="Enter the phone number associated with your Fi account"
+            )
+
+        with col2:
+            if st.button("🔍 Fetch Data", type="primary", key="fetch_data_btn"):
+                if phone_input and len(phone_input) == 10 and phone_input.isdigit():
+                    st.session_state.phone_number = phone_input
+                    st.session_state.data_fetched = False
+                    st.session_state.mcp_client = None
+                    st.success(f"✅ Phone number set: {phone_input}")
+                    st.rerun()
+                else:
+                    st.error("❌ Please enter a valid 10-digit phone number")
+
+        with col3:
+            if st.button("🔄 Clear Data", key="clear_data_btn"):
+                st.session_state.phone_number = None
+                st.session_state.data_fetched = False
+                st.session_state.mcp_client = None
+                st.success("✅ Data cleared")
+                st.rerun()
+
+        # Show current status
+        if st.session_state.phone_number:
+            st.info(f"📱 Connected to: {st.session_state.phone_number} | Status: {'✅ Data Fetched' if st.session_state.data_fetched else '⏳ Ready to Fetch'}")
+        else:
+            st.warning("⚠️ Please enter a phone number to start")
+
+        st.markdown("---")
+
+        # Only show dashboard content if phone number is set
+        if not st.session_state.phone_number:
+            st.info("👆 Enter a phone number above to access the financial dashboard")
+            return
+
+        # Initialize MCP client and fetch data if not already done
+        if not st.session_state.data_fetched:
+            self._initialize_mcp_and_fetch_data()
+
         # Header with modern design
         st.markdown('<div class="financial-summary">', unsafe_allow_html=True)
         col1, col2 = st.columns([3, 1])
@@ -291,12 +426,13 @@ class ModernFinancialDashboard:
         self.render_financial_overview()
 
                 # Main content tabs with modern styling
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "🧠 AI Insights",
             "📈 Portfolio Analysis",
             "📊 Stock Tracker",
             "📱 Subscription Tracker",
             "💳 Credit & Debt",
+            "💰 Debt & Budget",
             "🤖 MCP AI Agent",
             "⚙️ System Status"
         ])
@@ -317,9 +453,12 @@ class ModernFinancialDashboard:
             self.render_credit_analysis()
 
         with tab6:
-            self.render_mcp_ai_agent()
+            self.render_debt_analysis()
 
         with tab7:
+            self.render_mcp_ai_agent()
+
+        with tab8:
             self.render_system_status()
 
     def render_financial_overview(self):
@@ -454,8 +593,8 @@ class ModernFinancialDashboard:
                 # Show quota restriction
                 st.button("⚠️ Quota Exceeded", disabled=True, type="secondary", key="insights_quota_exceeded")
                 st.error(f"❌ **Quota Limit Reached**\n\n"
-                        f"Daily: {quota_status['daily_used']}/{quota_status['daily_limit']}\n\n"
-                        f"Hourly: {quota_status['hourly_used']}/{quota_status['hourly_limit']}\n\n"
+                        f"Daily: {quota_status.get('daily_used', 0)}/{quota_status.get('daily_limit', 0)}\n\n"
+                        f"Hourly: {quota_status.get('hourly_used', 0)}/{quota_status.get('hourly_limit', 0)}\n\n"
                         f"Please wait before generating more insights.")
 
         # Interactive AI Chat Section
@@ -1511,6 +1650,316 @@ class ModernFinancialDashboard:
         finally:
             db.close()
 
+    def render_debt_analysis(self):
+        """Render debt and budget analysis using ADK agent"""
+        st.header("💰 Debt & Budget Analysis")
+        st.markdown("AI-powered debt analysis and budget optimization using your MCP data")
+
+        # Data source selection
+        data_source = st.selectbox(
+            "Select Data Source",
+            ["MCP Database Data", "Mock Data"],
+            help="Choose between real MCP data from database or mock data for testing"
+        )
+
+        if data_source == "MCP Database Data":
+            # Use real MCP data from database
+            try:
+                # Get MCP data from database
+                db = SessionLocal()
+                mcp_records = db.query(MCPData).filter(
+                    MCPData.timestamp > datetime.utcnow() - timedelta(days=30)
+                ).order_by(MCPData.timestamp.desc()).all()
+
+                if not mcp_records:
+                    st.warning("No MCP data found in database. Please collect data first.")
+                    return
+
+                # Organize data by type
+                mcp_data = {}
+                for record in mcp_records:
+                    data_type = record.data_type
+                    if data_type not in mcp_data:
+                        mcp_data[data_type] = []
+                    mcp_data[data_type].append(record.get_data())
+
+                db.close()
+
+                # Show data summary
+                st.success(f"✅ Found {len(mcp_records)} MCP records with {len(mcp_data)} data types")
+
+                # Add a button to trigger analysis
+                if st.button("🧠 Run Debt & Budget Analysis", type="primary", key="run_debt_analysis"):
+                    # Analyze with debt analysis agent
+                    with st.spinner("Analyzing debt and budget patterns..."):
+                        import asyncio
+                        analysis_result = asyncio.run(debt_analysis_agent.analyze_debt_and_budget(st.session_state.phone_number))
+
+                    if 'error' in analysis_result:
+                        st.error(f"Analysis failed: {analysis_result['error']}")
+                        return
+
+                    self._display_debt_analysis_results(analysis_result)
+                else:
+                    st.info("Click the button above to run debt and budget analysis on your MCP data")
+
+            except Exception as e:
+                st.error(f"Error analyzing debt data: {e}")
+                return
+
+        else:
+            # Use mock data
+            if st.button("🧠 Run Mock Debt Analysis", type="primary", key="run_mock_debt_analysis"):
+                mock_analysis = self._generate_mock_debt_analysis()
+                self._display_debt_analysis_results(mock_analysis)
+            else:
+                st.info("Click the button above to run mock debt analysis")
+
+    def _display_debt_analysis_results(self, analysis_result: Dict[str, Any]):
+        """Display debt analysis results"""
+
+        # Debt Summary
+        debt_summary = analysis_result.get('debt_summary', {})
+        if debt_summary:
+            st.subheader("📊 Debt Summary")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                total_debt = debt_summary.get('total_debt', 0)
+                st.metric("Total Debt", f"₹{total_debt:,.2f}")
+
+            with col2:
+                debt_by_type = debt_summary.get('debt_by_type', {})
+                credit_card_debt = debt_by_type.get('credit_card', {}).get('amount', 0)
+                st.metric("Credit Card Debt", f"₹{credit_card_debt:,.2f}")
+
+            with col3:
+                debt_health = debt_summary.get('debt_health_metrics', {})
+                dti_ratio = debt_health.get('debt_to_income_ratio', 0)
+                st.metric("Debt-to-Income Ratio", f"{dti_ratio:.1%}")
+
+            # Debt breakdown chart
+            if debt_by_type:
+                debt_data = []
+                for debt_type, details in debt_by_type.items():
+                    if isinstance(details, dict) and 'amount' in details:
+                        debt_data.append({
+                            'Type': debt_type.replace('_', ' ').title(),
+                            'Amount': details['amount']
+                        })
+
+                if debt_data:
+                    df = pd.DataFrame(debt_data)
+                    fig = px.pie(df, values='Amount', names='Type', title="Debt Breakdown by Type")
+                    st.plotly_chart(fig, use_container_width=True)
+
+        # Budget Analysis
+        budget_analysis = analysis_result.get('budget_analysis', {})
+        if budget_analysis:
+            st.subheader("📈 Budget Analysis")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                monthly_income = budget_analysis.get('monthly_income', 0)
+                st.metric("Monthly Income", f"₹{monthly_income:,.2f}")
+
+            with col2:
+                monthly_expenses = budget_analysis.get('monthly_expenses', 0)
+                st.metric("Monthly Expenses", f"₹{monthly_expenses:,.2f}")
+
+            with col3:
+                savings_rate = budget_analysis.get('savings_rate', 0)
+                st.metric("Savings Rate", f"{savings_rate:.1f}%")
+
+            # Expense categories chart
+            expense_categories = budget_analysis.get('expense_categories', {})
+            if expense_categories:
+                expense_data = []
+                for category, details in expense_categories.items():
+                    if isinstance(details, dict) and 'amount' in details:
+                        expense_data.append({
+                            'Category': category.replace('_', ' ').title(),
+                            'Amount': details['amount'],
+                            'Percentage': details.get('percentage', 0)
+                        })
+
+                if expense_data:
+                    df = pd.DataFrame(expense_data)
+                    fig = px.bar(df, x='Category', y='Amount', title="Monthly Expenses by Category")
+                    st.plotly_chart(fig, use_container_width=True)
+
+        # Financial Health Metrics
+        health_metrics = analysis_result.get('financial_health_metrics', {})
+        if health_metrics:
+            st.subheader("🏥 Financial Health Metrics")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                health_score = health_metrics.get('financial_health_score', 0)
+                st.metric("Financial Health Score", f"{health_score}/100")
+
+            with col2:
+                risk_level = health_metrics.get('risk_level', 'Unknown')
+                st.metric("Risk Level", risk_level.title())
+
+            with col3:
+                cash_flow = health_metrics.get('monthly_cash_flow', 0)
+                st.metric("Monthly Cash Flow", f"₹{cash_flow:,.2f}")
+
+        # Optimization Recommendations
+        recommendations = analysis_result.get('optimization_recommendations', [])
+        if recommendations:
+            st.subheader("💡 Optimization Recommendations")
+
+            for i, rec in enumerate(recommendations):
+                with st.expander(f"🎯 {rec.get('title', f'Recommendation {i+1}')}"):
+                    st.write(f"**Type:** {rec.get('type', 'Unknown')}")
+                    st.write(f"**Priority:** {rec.get('priority', 'Medium')}")
+                    st.write(f"**Description:** {rec.get('description', 'No description')}")
+                    st.write(f"**Potential Impact:** {rec.get('potential_impact', 'Unknown')}")
+
+                    implementation_steps = rec.get('implementation_steps', [])
+                    if implementation_steps:
+                        st.write("**Implementation Steps:**")
+                        for step in implementation_steps:
+                            st.write(f"• {step}")
+
+                    st.write(f"**Timeline:** {rec.get('timeline', 'Unknown')}")
+
+        # Repayment Plan
+        repayment_plan = analysis_result.get('repayment_plan', {})
+        if repayment_plan:
+            st.subheader("📋 Debt Repayment Plan")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write(f"**Strategy:** {repayment_plan.get('repayment_strategy', 'Unknown')}")
+                st.write(f"**Total Repayment Time:** {repayment_plan.get('total_repayment_time', 0)} months")
+                st.write(f"**Monthly Payment Required:** ₹{repayment_plan.get('monthly_payment_required', 0):,.2f}")
+
+            with col2:
+                st.write(f"**Estimated Completion:** {repayment_plan.get('estimated_completion', 'Unknown')}")
+
+                debt_order = repayment_plan.get('debt_repayment_order', [])
+                if debt_order:
+                    st.write("**Repayment Order:**")
+                    for i, debt in enumerate(debt_order, 1):
+                        st.write(f"{i}. {debt}")
+
+        # Emergency Fund Strategy
+        emergency_strategy = analysis_result.get('emergency_fund_strategy', {})
+        if emergency_strategy:
+            st.subheader("🛡️ Emergency Fund Strategy")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write(f"**Target Amount:** ₹{emergency_strategy.get('emergency_fund_target', 0):,.2f}")
+                st.write(f"**Monthly Savings Needed:** ₹{emergency_strategy.get('monthly_savings_needed', 0):,.2f}")
+
+            with col2:
+                st.write(f"**Time to Target:** {emergency_strategy.get('time_to_target', 0)} months")
+                st.write(f"**Recommended Monthly Contribution:** ₹{emergency_strategy.get('recommended_monthly_contribution', 0):,.2f}")
+
+            st.write(f"**Strategy:** {emergency_strategy.get('strategy', 'No strategy provided')}")
+
+    def _generate_mock_debt_analysis(self) -> Dict[str, Any]:
+        """Generate mock debt analysis data for testing"""
+        return {
+            'debt_summary': {
+                'total_debt': 450000,
+                'debt_by_type': {
+                    'credit_card': {'amount': 150000, 'count': 2, 'avg_interest': 18.5},
+                    'personal_loan': {'amount': 200000, 'count': 1, 'avg_interest': 12.0},
+                    'vehicle_loan': {'amount': 100000, 'count': 1, 'avg_interest': 8.5}
+                },
+                'debt_health_metrics': {
+                    'debt_to_income_ratio': 0.35,
+                    'credit_utilization_ratio': 0.65,
+                    'total_monthly_payments': 15000,
+                    'highest_interest_debt': 'Credit Card - HDFC',
+                    'debt_priority': 'medium'
+                }
+            },
+            'budget_analysis': {
+                'monthly_income': 80000,
+                'monthly_expenses': 65000,
+                'savings_rate': 18.75,
+                'expense_categories': {
+                    'housing': {'amount': 25000, 'percentage': 38.5},
+                    'transportation': {'amount': 8000, 'percentage': 12.3},
+                    'food': {'amount': 12000, 'percentage': 18.5},
+                    'utilities': {'amount': 5000, 'percentage': 7.7},
+                    'entertainment': {'amount': 8000, 'percentage': 12.3},
+                    'debt_payments': {'amount': 15000, 'percentage': 23.1}
+                }
+            },
+            'financial_health_metrics': {
+                'debt_to_income_ratio': 0.35,
+                'savings_rate': 18.75,
+                'monthly_cash_flow': 15000,
+                'financial_health_score': 72.5,
+                'risk_level': 'medium'
+            },
+            'optimization_recommendations': [
+                {
+                    'type': 'debt_repayment',
+                    'priority': 'high',
+                    'title': 'Focus on High-Interest Credit Card Debt',
+                    'description': 'Pay off credit card debt first due to high interest rates',
+                    'potential_impact': 'Save ₹27,750 annually in interest',
+                    'implementation_steps': [
+                        'Pay minimum on all debts',
+                        'Put extra money toward highest interest credit card',
+                        'Consider balance transfer to lower rate card'
+                    ],
+                    'timeline': 'immediate'
+                },
+                {
+                    'type': 'budget_optimization',
+                    'priority': 'medium',
+                    'title': 'Reduce Entertainment Expenses',
+                    'description': 'Cut entertainment spending by 25% to increase debt payments',
+                    'potential_impact': 'Free up ₹2,000 monthly for debt repayment',
+                    'implementation_steps': [
+                        'Review subscription services',
+                        'Find free entertainment alternatives',
+                        'Set monthly entertainment budget'
+                    ],
+                    'timeline': 'short_term'
+                }
+            ],
+            'repayment_plan': {
+                'repayment_strategy': 'avalanche',
+                'total_repayment_time': 36,
+                'monthly_payment_required': 15000,
+                'debt_repayment_order': [
+                    'Credit Card - HDFC (18.5%)',
+                    'Credit Card - ICICI (18.5%)',
+                    'Personal Loan (12.0%)',
+                    'Vehicle Loan (8.5%)'
+                ],
+                'estimated_completion': '2027-01-15'
+            },
+            'emergency_fund_strategy': {
+                'emergency_fund_target': 390000,
+                'monthly_savings_needed': 32500,
+                'time_to_completion': 12,
+                'recommended_monthly_contribution': 4500,
+                'strategy': 'Build emergency fund while maintaining debt payments'
+            },
+            'risk_assessment': {
+                'overall_risk_level': 'medium',
+                'risk_factors': ['Moderate debt-to-income ratio', 'High credit utilization'],
+                'risk_score': 65.0,
+                'mitigation_strategies': ['Focus on debt reduction', 'Increase savings rate']
+            }
+        }
+
     def render_mcp_ai_agent(self):
         """Render MCP AI Agent control panel"""
         st.header("🤖 MCP Periodic AI Agent")
@@ -1572,23 +2021,23 @@ class ModernFinancialDashboard:
 
         # Agent statistics
         st.subheader("📊 Agent Statistics")
-        stats = agent_status["stats"]
+        stats = agent_status.get("stats", {})
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Total Collections", stats["total_collections"])
+            st.metric("Total Collections", stats.get("total_collections", 0))
         with col2:
-            st.metric("Successful Collections", stats["successful_collections"])
+            st.metric("Successful Collections", stats.get("successful_collections", 0))
         with col3:
-            st.metric("Analysis Count", stats["analysis_count"])
+            st.metric("Analysis Count", stats.get("analysis_count", 0))
         with col4:
-            data_types = len(stats["data_types_collected"]) if isinstance(stats["data_types_collected"], set) else 0
+            data_types = len(stats.get("data_types_collected", set())) if isinstance(stats.get("data_types_collected"), set) else 0
             st.metric("Data Types Collected", data_types)
 
         # Last activity timestamps
-        if stats["last_collection_time"]:
+        if stats.get("last_collection_time"):
             st.info(f"🕒 Last Collection: {stats['last_collection_time']}")
-        if stats["last_analysis_time"]:
+        if stats.get("last_analysis_time"):
             st.info(f"🧠 Last Analysis: {stats['last_analysis_time']}")
 
         # Control panel

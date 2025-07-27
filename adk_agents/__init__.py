@@ -6,21 +6,25 @@ Financial intelligence through coordinated AI agents powered by Google Gemini
 from .agent_config import adk_config
 from .ai_analysis_base import AIAnalysisBase
 from .financial_data_collector import financial_data_collector_agent
-from .risk_assessment_agent import risk_assessment_agent 
+from .risk_assessment_agent import risk_assessment_agent
 from .market_analysis_agent import market_analysis_agent
 from .adk_orchestrator import adk_orchestrator
 from .mcp_periodic_ai_agent import mcp_periodic_ai_agent
+from .subscription_tracking_agent import subscription_tracking_agent
+from .debt_analysis_agent import debt_analysis_agent
 
 __all__ = [
     'adk_config',
     'AIAnalysisBase',
     'financial_data_collector_agent',
     'risk_assessment_agent',
-    'market_analysis_agent', 
+    'market_analysis_agent',
     'adk_orchestrator',
-    'mcp_periodic_ai_agent'
+    'mcp_periodic_ai_agent',
+    'subscription_tracking_agent',
+    'debt_analysis_agent'
 ]
 
 __version__ = "2.0.0"
 __author__ = "Google Cloud ADK Multi-Agent System with AI Analysis"
-__description__ = "Financial intelligence through coordinated AI agents using Google Cloud ADK and Gemini AI" 
+__description__ = "Financial intelligence through coordinated AI agents using Google Cloud ADK and Gemini AI"

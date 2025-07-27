@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 class AIAnalysisBase:
     """Base class providing AI-powered analysis using Google Gemini"""
-    
+
     def __init__(self, agent_id: str, agent_config: Dict[str, Any]):
         self.agent_id = agent_id
         self.config = agent_config
         self.llm = None
         self._initialize_ai_model()
-    
+
     def _initialize_ai_model(self):
         """Initialize the Gemini AI model"""
         try:
@@ -49,19 +49,20 @@ class AIAnalysisBase:
                     top_p=self.config.get("generation_config", {}).get("top_p", 0.8)
                 )
                 logger.info(f"Initialized Google GenAI model for {self.agent_id}")
-                
+
         except Exception as e:
-            logger.error(f"Failed to initialize AI model for {self.agent_id}: {e}")
-            raise
-    
-    async def ai_analyze(self, 
+            logger.warning(f"Failed to initialize AI model for {self.agent_id}: {e}")
+            logger.warning("AI analysis will use fallback methods")
+            self.llm = None
+
+    async def ai_analyze(self,
                         analysis_type: str,
-                        data: Dict[str, Any], 
+                        data: Dict[str, Any],
                         specific_instructions: str = "",
                         output_format: str = "json") -> Dict[str, Any]:
         """
         Generic AI analysis method using Gemini
-        
+
         Args:
             analysis_type: Type of analysis (risk, market, data_quality, etc.)
             data: Financial data to analyze
@@ -69,27 +70,32 @@ class AIAnalysisBase:
             output_format: Expected output format (json, text, structured)
         """
         try:
+            # Check if AI model is available
+            if self.llm is None:
+                logger.warning(f"AI model not available for {self.agent_id}, using fallback analysis")
+                return self._fallback_analysis(analysis_type, data, specific_instructions)
+
             # Get system instruction from config
             system_instruction = self.config.get("system_instruction", "")
-            
+
             # Create analysis prompt
             analysis_prompt = self._create_analysis_prompt(
                 analysis_type, data, specific_instructions, output_format
             )
-            
+
             # Prepare messages
             messages = [
                 SystemMessage(content=system_instruction),
                 HumanMessage(content=analysis_prompt)
             ]
-            
+
             # Get AI response
             logger.info(f"Starting AI analysis: {analysis_type} for {self.agent_id}")
             response = await self.llm.ainvoke(messages)
-            
+
             # Process response
             result = self._process_ai_response(response.content, output_format)
-            
+
             # Add metadata
             result["ai_analysis_metadata"] = {
                 "agent_id": self.agent_id,
@@ -98,29 +104,24 @@ class AIAnalysisBase:
                 "timestamp": datetime.utcnow().isoformat(),
                 "confidence_indicators": self._extract_confidence_indicators(result)
             }
-            
-            logger.info(f"AI analysis completed: {analysis_type}")
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error in AI analysis for {self.agent_id}: {e}")
-            return {
-                "error": str(e),
-                "analysis_type": analysis_type,
-                "fallback_used": True,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-    
-    def _create_analysis_prompt(self, 
+            logger.info(f"Falling back to basic analysis for {analysis_type}")
+            return self._fallback_analysis(analysis_type, data, specific_instructions)
+
+    def _create_analysis_prompt(self,
                                analysis_type: str,
-                               data: Dict[str, Any], 
+                               data: Dict[str, Any],
                                specific_instructions: str,
                                output_format: str) -> str:
         """Create a comprehensive analysis prompt for Gemini"""
-        
+
         # Data summary for context
         data_summary = self._create_data_summary(data)
-        
+
         prompt = f"""
 ANALYSIS REQUEST: {analysis_type.upper()}
 
@@ -154,7 +155,7 @@ CRITICAL REQUIREMENTS:
 Begin your {analysis_type} analysis now:
 """
         return prompt
-    
+
     def _create_data_summary(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a concise summary of the financial data for the prompt"""
         summary = {
@@ -162,7 +163,7 @@ Begin your {analysis_type} analysis now:
             "key_metrics": {},
             "data_quality_indicators": {}
         }
-        
+
         try:
             # Summarize data sources
             if "data_sources" in data:
@@ -172,7 +173,7 @@ Begin your {analysis_type} analysis now:
                         "success": source.get("success", False),
                         "record_count": source.get("record_count", 0)
                     })
-            
+
             # Extract key metrics
             if "data" in data:
                 data_content = data["data"]
@@ -183,11 +184,11 @@ Begin your {analysis_type} analysis now:
                         "credit_score", "epf_balance", "total_investment",
                         "transaction_count", "monthly_income", "monthly_expenses"
                     ]
-                    
+
                     for metric in metrics_to_extract:
                         if metric in data_content:
                             summary["key_metrics"][metric] = data_content[metric]
-            
+
             # Data quality indicators
             summary["data_quality_indicators"] = {
                 "sources_available": len(summary["data_sources"]),
@@ -197,13 +198,13 @@ Begin your {analysis_type} analysis now:
                     "total_net_worth", "total_assets", "total_liabilities", "credit_score"
                 ])
             }
-            
+
         except Exception as e:
             logger.error(f"Error creating data summary: {e}")
             summary["error"] = str(e)
-        
+
         return summary
-    
+
     def _process_ai_response(self, response_content: str, output_format: str) -> Dict[str, Any]:
         """Process and validate AI response"""
         try:
@@ -216,7 +217,7 @@ Begin your {analysis_type} analysis now:
                 if content.endswith("```"):
                     content = content[:-3]
                 content = content.strip()
-                
+
                 try:
                     result = json.loads(content)
                 except json.JSONDecodeError:
@@ -231,16 +232,16 @@ Begin your {analysis_type} analysis now:
                     "analysis_text": response_content,
                     "output_format": output_format
                 }
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error processing AI response: {e}")
             return {
                 "error": f"Response processing failed: {e}",
                 "raw_response": response_content
             }
-    
+
     def _extract_confidence_indicators(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Extract confidence indicators from AI analysis result"""
         confidence_indicators = {
@@ -248,14 +249,14 @@ Begin your {analysis_type} analysis now:
             "data_quality_impact": "medium",
             "analysis_depth": "standard"
         }
-        
+
         try:
             # Look for confidence scores in the result
             if "confidence_score" in result:
                 confidence_indicators["overall_confidence"] = result["confidence_score"]
             elif "confidence" in result:
                 confidence_indicators["overall_confidence"] = result["confidence"]
-            
+
             # Assess data quality impact
             if "data_quality_score" in result:
                 score = result["data_quality_score"]
@@ -265,7 +266,7 @@ Begin your {analysis_type} analysis now:
                     confidence_indicators["data_quality_impact"] = "medium"
                 else:
                     confidence_indicators["data_quality_impact"] = "high"
-            
+
             # Assess analysis depth based on response content
             if isinstance(result, dict):
                 key_count = len([k for k in result.keys() if not k.startswith("_")])
@@ -275,13 +276,13 @@ Begin your {analysis_type} analysis now:
                     confidence_indicators["analysis_depth"] = "standard"
                 else:
                     confidence_indicators["analysis_depth"] = "basic"
-            
+
         except Exception as e:
             logger.error(f"Error extracting confidence indicators: {e}")
-        
+
         return confidence_indicators
-    
-    async def ai_synthesize_insights(self, 
+
+    async def ai_synthesize_insights(self,
                                    agent_outputs: Dict[str, Any],
                                    synthesis_focus: str = "comprehensive") -> Dict[str, Any]:
         """
@@ -345,28 +346,80 @@ OUTPUT STRUCTURE (JSON):
 
 Perform the synthesis analysis now:
 """
-            
+
             messages = [
                 SystemMessage(content="You are an expert financial analyst specializing in synthesizing complex multi-agent analysis results into actionable insights."),
                 HumanMessage(content=synthesis_prompt)
             ]
-            
+
             response = await self.llm.ainvoke(messages)
             result = self._process_ai_response(response.content, "json")
-            
+
             # Add synthesis metadata
             result["synthesis_metadata"] = {
                 "synthesis_type": synthesis_focus,
                 "agents_synthesized": list(agent_outputs.keys()),
                 "timestamp": datetime.utcnow().isoformat()
             }
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error in AI synthesis: {e}")
             return {
                 "error": str(e),
                 "synthesis_type": synthesis_focus,
                 "timestamp": datetime.utcnow().isoformat()
-            } 
+            }
+
+    def _fallback_analysis(self, analysis_type: str, data: Dict[str, Any], specific_instructions: str = "") -> Dict[str, Any]:
+        """
+        Fallback analysis when AI model is not available
+
+        Args:
+            analysis_type: Type of analysis
+            data: Financial data to analyze
+            specific_instructions: Additional instructions
+
+        Returns:
+            Basic analysis result
+        """
+        logger.info(f"Using fallback analysis for {analysis_type}")
+
+        # Create basic analysis based on data
+        result = {
+            "analysis_type": analysis_type,
+            "fallback_used": True,
+            "timestamp": datetime.utcnow().isoformat(),
+            "data_summary": self._create_data_summary(data),
+            "basic_insights": [],
+            "recommendations": []
+        }
+
+        # Add basic insights based on analysis type
+        if analysis_type == "debt_analysis":
+            result["basic_insights"] = [
+                "Debt analysis requires AI model for detailed insights",
+                "Basic data summary available",
+                "Consider setting up Google Cloud credentials for full analysis"
+            ]
+        elif analysis_type == "budget_analysis":
+            result["basic_insights"] = [
+                "Budget analysis requires AI model for detailed insights",
+                "Basic data summary available",
+                "Consider setting up Google Cloud credentials for full analysis"
+            ]
+        elif analysis_type == "optimization_recommendations":
+            result["basic_insights"] = [
+                "Optimization recommendations require AI model",
+                "Basic data summary available",
+                "Consider setting up Google Cloud credentials for full analysis"
+            ]
+
+        result["recommendations"] = [
+            "Set up Google Cloud credentials for full AI analysis",
+            "Use mock data for testing functionality",
+            "Check configuration in .env file"
+        ]
+
+        return result

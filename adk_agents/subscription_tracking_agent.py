@@ -499,3 +499,7 @@ class SubscriptionTrackingAgent(AIAnalysisBase):
             'semantic_analysis': subscription.semantic_analysis,
             'reasoning': subscription.reasoning
         }
+
+
+# Global instance
+subscription_tracking_agent = SubscriptionTrackingAgent()
