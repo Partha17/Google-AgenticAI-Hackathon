@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant Dashboard as 📊 Dashboard
+    participant MCPClient as 📡 MCP Client
+    participant FIServer as 🏦 Fi MCP Server
+    participant AIAgent as 🤖 AI Agent
+    participant Database as 💾 Database
+    participant CloudRun as ☁️ Cloud Run
+    participant Monitoring as 📈 Monitoring
+
+    User->>Dashboard: Access Dashboard
+    Dashboard->>MCPClient: Request Financial Data
+    MCPClient->>FIServer: Fetch Data
+    FIServer-->>MCPClient: Return Financial Data
+    MCPClient->>Database: Store Data
+    MCPClient-->>Dashboard: Return Data
+    
+    Dashboard->>AIAgent: Request AI Analysis
+    AIAgent->>Database: Read Financial Data
+    AIAgent->>AIAgent: Generate Insights
+    AIAgent->>Database: Store Insights
+    AIAgent-->>Dashboard: Return Analysis
+    
+    Dashboard->>CloudRun: Deploy Updates
+    CloudRun->>Monitoring: Report Metrics
+    Monitoring-->>CloudRun: Health Status
+    
+    Dashboard-->>User: Display Results 

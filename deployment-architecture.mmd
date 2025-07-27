@@ -1,0 +1,86 @@
+graph TB
+    %% Development Environment
+    subgraph "💻 Development Environment"
+        DEV[Local Development]
+        GIT[Git Repository]
+        BRANCHES[Feature Branches]
+        MERGE[Branch Merging]
+    end
+
+    %% CI/CD Pipeline
+    subgraph "🔄 CI/CD Pipeline"
+        BUILD[Cloud Build]
+        TEST[Automated Testing]
+        VERSION[Version Tagging]
+        DEPLOY[Deploy to Cloud Run]
+    end
+
+    %% Production Environment
+    subgraph "🚀 Production Environment"
+        subgraph "☁️ Google Cloud Run"
+            SERVICE[Fi Financial Dashboard Service]
+            REVISIONS[Multiple Revisions]
+            TRAFFIC[Traffic Management]
+            SCALING[Auto Scaling]
+        end
+        
+        subgraph "📊 Monitoring & Logging"
+            LOGS[Cloud Logging]
+            METRICS[Cloud Monitoring]
+            ALERTS[Alerting]
+            DASHBOARDS[Monitoring Dashboards]
+        end
+    end
+
+    %% Data Flow
+    subgraph "📡 Data Flow"
+        MCP_SERVER[Fi MCP Server]
+        AI_SERVICES[AI Services]
+        DATABASE[SQLite Database]
+    end
+
+    %% Rollback System
+    subgraph "🔄 Rollback System"
+        ROLLBACK[Rollback Scripts]
+        VERSION_HISTORY[Version History]
+        REVISION_MANAGEMENT[Revision Management]
+    end
+
+    %% Connections
+    DEV --> GIT
+    GIT --> BRANCHES
+    BRANCHES --> MERGE
+    MERGE --> BUILD
+    BUILD --> TEST
+    TEST --> VERSION
+    VERSION --> DEPLOY
+    DEPLOY --> SERVICE
+    SERVICE --> REVISIONS
+    REVISIONS --> TRAFFIC
+    TRAFFIC --> SCALING
+    
+    SERVICE --> LOGS
+    SERVICE --> METRICS
+    METRICS --> ALERTS
+    ALERTS --> DASHBOARDS
+    
+    SERVICE --> MCP_SERVER
+    SERVICE --> AI_SERVICES
+    SERVICE --> DATABASE
+    
+    REVISIONS --> ROLLBACK
+    ROLLBACK --> VERSION_HISTORY
+    VERSION_HISTORY --> REVISION_MANAGEMENT
+
+    %% Styling
+    classDef dev fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    classDef cicd fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef production fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    classDef data fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef rollback fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+
+    class DEV,GIT,BRANCHES,MERGE dev
+    class BUILD,TEST,VERSION,DEPLOY cicd
+    class SERVICE,REVISIONS,TRAFFIC,SCALING,LOGS,METRICS,ALERTS,DASHBOARDS production
+    class MCP_SERVER,AI_SERVICES,DATABASE data
+    class ROLLBACK,VERSION_HISTORY,REVISION_MANAGEMENT rollback 
