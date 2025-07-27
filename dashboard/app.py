@@ -69,29 +69,152 @@ except Exception as e:
 
 # Page configuration
 st.set_page_config(
-    page_title="💰 Fi Financial AI Dashboard",
-    page_icon="💰",
+    page_title="🤖 FinGenie - AI Financial Dashboard",
+    page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"  # Collapsed by default for mobile
 )
 
-# Custom CSS for modern design
+# FinGenie Logo Header
+st.markdown("""
+<div style="
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1rem 2rem;
+    margin: -1rem -2rem 1rem -2rem;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3), 0 0 30px rgba(102, 126, 234, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+">
+    <div style="
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shimmer 3s infinite;
+    "></div>
+    <div class="header-logo">
+        <span class="logo-icon">🤖</span>
+        <span class="logo-text">FinGenie</span>
+        <span style="font-size: 1rem; opacity: 0.8; margin-left: 0.5rem;">AI Financial Intelligence</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Custom CSS for comprehensive responsive design
 st.markdown("""
 <style>
+    /* FinGenie Logo and Header */
+    .header-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .logo-icon {
+        font-size: 2rem;
+        animation: pulse 2s infinite;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .logo-icon:hover {
+        animation: bounce 0.6s ease-in-out;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-10px); }
+        60% { transform: translateY(-5px); }
+    }
+
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+
+    .logo-text {
+        background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+    }
+
+    /* Mobile logo adjustments */
+    @media (max-width: 768px) {
+        .header-logo {
+            font-size: 1.2rem;
+        }
+        .logo-icon {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* Metrics Grid Styling */
+    .metrics-grid .row-widget.stHorizontal {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+    }
+
+    .metrics-grid .row-widget.stHorizontal > div {
+        width: 100% !important;
+        flex: none !important;
+        min-width: 0 !important;
+    }
+
+    /* Override any conflicting styles */
+    .metrics-grid .row-widget.stHorizontal > div:nth-child(1),
+    .metrics-grid .row-widget.stHorizontal > div:nth-child(2),
+    .metrics-grid .row-widget.stHorizontal > div:nth-child(3),
+    .metrics-grid .row-widget.stHorizontal > div:nth-child(4) {
+        width: 100% !important;
+        flex: 0 0 calc(50% - 0.25rem) !important;
+    }
+
+    @media (max-width: 768px) {
+        .metrics-grid .row-widget.stHorizontal {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+    /* Mobile-first responsive design */
     .main > div {
-        padding-top: 2rem;
+        padding-top: 1rem;
     }
+
+    /* Responsive metrics */
     .stMetric > div > div > div > div {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
+
+    /* Responsive cards */
     .insight-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
+        padding: 1rem;
         border-radius: 15px;
-        margin: 1rem 0;
+        margin: 0.5rem 0;
         color: white;
         box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        width: 100%;
+        box-sizing: border-box;
     }
+
     .insight-high {
         background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     }
@@ -102,39 +225,400 @@ st.markdown("""
         background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
         color: #333;
     }
+
     .financial-summary {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
+        padding: 1.5rem;
         border-radius: 20px;
         color: white;
-        margin: 2rem 0;
+        margin: 1rem 0;
+        width: 100%;
+        box-sizing: border-box;
     }
+
     .status-good {
         background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        padding: 1rem;
+        padding: 0.75rem;
         border-radius: 10px;
         color: white;
         text-align: center;
         margin: 0.5rem 0;
+        width: 100%;
+        box-sizing: border-box;
     }
     .status-warning {
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        padding: 1rem;
+        padding: 0.75rem;
         border-radius: 10px;
         color: white;
         text-align: center;
         margin: 0.5rem 0;
+        width: 100%;
+        box-sizing: border-box;
     }
     .status-error {
         background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-        padding: 1rem;
+        padding: 0.75rem;
         border-radius: 10px;
         color: #333;
         text-align: center;
         margin: 0.5rem 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Responsive Streamlit Components */
+
+    /* Make columns stack on mobile */
+    .row-widget.stHorizontal > div {
+        flex-wrap: wrap;
+    }
+
+    /* Responsive tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: #667eea #f0f0f0;
+        padding-bottom: 8px; /* Space for scrollbar */
+        margin-bottom: 0.5rem; /* Space below tabs */
+    }
+
+    /* Custom scrollbar for webkit browsers */
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-track {
+        background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 4px;
+    }
+
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    }
+
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: auto;
+        white-space: nowrap;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    /* Responsive expanders */
+    .streamlit-expanderHeader {
+        font-size: 1rem;
+        padding: 0.75rem;
+    }
+
+    /* Responsive dataframes */
+    .stDataFrame {
+        overflow-x: auto;
+        font-size: 0.9rem;
+    }
+
+    /* Responsive plotly charts */
+    .js-plotly-plot {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Responsive sidebar */
+    .css-1d391kg {
+        width: 100% !important;
+    }
+
+    /* Mobile responsive adjustments */
+    @media (max-width: 768px) {
+        .main > div {
+            padding-top: 0.5rem;
+        }
+
+        .stMetric > div > div > div > div {
+            font-size: 0.9rem;
+        }
+
+        .insight-card {
+            padding: 0.75rem;
+            margin: 0.25rem 0;
+        }
+
+        .financial-summary {
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        .status-good, .status-warning, .status-error {
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+        }
+
+        /* Force columns to stack on mobile (but not for 4-column layouts) */
+        .row-widget.stHorizontal > div:not(:nth-child(4n+1)):not(:nth-child(4n+2)):not(:nth-child(4n+3)):not(:nth-child(4n+4)) {
+            flex-direction: column !important;
+        }
+
+        .row-widget.stHorizontal > div:not(:nth-child(4n+1)):not(:nth-child(4n+2)):not(:nth-child(4n+3)):not(:nth-child(4n+4)) > div {
+            width: 100% !important;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Make 4-column layouts into 2x2 grid on mobile */
+        .row-widget.stHorizontal > div:nth-child(4n+1),
+        .row-widget.stHorizontal > div:nth-child(4n+2),
+        .row-widget.stHorizontal > div:nth-child(4n+3),
+        .row-widget.stHorizontal > div:nth-child(4n+4) {
+            width: 50% !important;
+            flex: 0 0 50% !important;
+            flex-direction: row !important;
+        }
+
+        /* Ensure metric cards in 4-column layouts don't stack */
+        .row-widget.stHorizontal > div:nth-child(4n+1) > div,
+        .row-widget.stHorizontal > div:nth-child(4n+2) > div,
+        .row-widget.stHorizontal > div:nth-child(4n+3) > div,
+        .row-widget.stHorizontal > div:nth-child(4n+4) > div {
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* Ensure proper spacing for 2x2 grid */
+        .row-widget.stHorizontal > div:nth-child(odd) {
+            padding-right: 0.25rem;
+        }
+
+        .row-widget.stHorizontal > div:nth-child(even) {
+            padding-left: 0.25rem;
+        }
+
+        /* Force 4-column layouts to wrap into 2x2 grid */
+        .row-widget.stHorizontal > div:nth-child(4n+1),
+        .row-widget.stHorizontal > div:nth-child(4n+2) {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Ensure the container allows wrapping */
+        .row-widget.stHorizontal {
+            flex-wrap: wrap !important;
+            display: flex !important;
+        }
+
+        /* Specific styling for 4-column metric containers */
+        .row-widget.stHorizontal:has(> div:nth-child(4)) {
+            gap: 0.5rem;
+        }
+
+        /* Adjust tabs for mobile */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0.25rem;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #f0f0f0;
+            padding-bottom: 10px; /* More space for scrollbar */
+            margin-bottom: 0.5rem; /* Space below tabs */
+        }
+
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-track {
+            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 4px;
+        }
+
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+
+        /* Ensure tab container has proper positioning */
+        .stTabs [data-baseweb="tab-list"] {
+            position: relative;
+        }
+
+        /* Add spacing between tabs and content */
+        .stTabs [data-baseweb="tab-panel"] {
+            margin-top: 0.5rem !important;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            padding: 0.1rem 0.4rem 0.3rem 0.4rem;
+            font-size: 0.8rem;
+            min-width: auto;
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+            height: auto !important;
+            min-height: 28px !important;
+        }
+
+        /* Hover effects for tabs */
+        .stTabs [data-baseweb="tab"]:hover {
+            background-color: rgba(102, 126, 234, 0.05) !important;
+            transition: background-color 0.2s ease;
+        }
+
+        /* Focus states for accessibility */
+        .stTabs [data-baseweb="tab"]:focus {
+            outline: 2px solid #667eea !important;
+            outline-offset: 2px !important;
+        }
+
+        /* Adjust expanders for mobile */
+        .streamlit-expanderHeader {
+            font-size: 0.9rem;
+            padding: 0.5rem;
+        }
+
+        /* Adjust dataframes for mobile */
+        .stDataFrame {
+            font-size: 0.8rem;
+        }
+
+        /* Ensure proper viewport */
+        .stApp {
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        /* Adjust metric cards for mobile */
+        .stMetric {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Make buttons more touch-friendly */
+        .stButton > button {
+            min-height: 44px;
+            padding: 0.5rem 1rem;
+        }
+
+        /* Center align buttons when there are 1-2 buttons */
+        .stHorizontal > div:has(.stButton):only-child,
+        .stHorizontal > div:has(.stButton):nth-child(1):nth-last-child(2),
+        .stHorizontal > div:has(.stButton):nth-child(2):nth-last-child(1) {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Center single buttons */
+        .stButton:only-child {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Adjust text inputs for mobile */
+        .stTextInput > div > div > input {
+            font-size: 16px; /* Prevents zoom on iOS */
+        }
+    }
+
+    /* Tablet responsive adjustments */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .main > div {
+            padding-top: 1.5rem;
+        }
+
+        .insight-card {
+            padding: 1.25rem;
+        }
+
+        .financial-summary {
+            padding: 1.75rem;
+        }
+
+        /* Adjust columns for tablet */
+        .row-widget.stHorizontal > div > div {
+            margin-bottom: 0.75rem;
+        }
+    }
+
+    /* Large screen optimizations */
+    @media (min-width: 1025px) {
+        .stTabs [data-baseweb="tab"] {
+            padding: 0.75rem 1.5rem;
+            font-size: 1.125rem; /* Increased by 2 points (1rem = 16px, 1.125rem = 18px) */
+        }
+
+        .streamlit-expanderHeader {
+            font-size: 1.125rem; /* Increased by 2 points */
+            padding: 1rem;
+        }
+
+        /* Increase metric font sizes on desktop */
+        .stMetric > div > div > div > div {
+            font-size: 1.125rem; /* Increased by 2 points */
+        }
+
+        /* Increase insight card font sizes on desktop */
+        .insight-card {
+            font-size: 1.125rem; /* Increased by 2 points */
+        }
+
+        /* Increase financial summary font sizes on desktop */
+        .financial-summary {
+            font-size: 1.125rem; /* Increased by 2 points */
+        }
+    }
+
+    /* Ensure charts are responsive */
+    .element-container {
+        width: 100% !important;
+    }
+
+    /* Improve touch targets on mobile */
+    @media (max-width: 768px) {
+        .stSelectbox > div > div {
+            min-height: 44px;
+        }
+
+        .stCheckbox > div > div {
+            min-height: 44px;
+        }
+
+        .stRadio > div > div {
+            min-height: 44px;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Responsive layout helper functions
+def responsive_columns(ratios, gap=1):
+    """
+    Create responsive columns that stack on mobile devices
+    Args:
+        ratios: List of column ratios (e.g., [2, 1] for 2:1 ratio)
+        gap: Gap between columns in rem
+    """
+    # Use st.columns for desktop layout
+    return st.columns(ratios)
+
+def is_mobile_device():
+    """
+    Detect if the user is on a mobile device
+    Returns True if mobile, False otherwise
+    """
+    # This is a simple detection based on user agent
+    # In a real implementation, you might want to use JavaScript
+    return False  # Default to desktop for now
 
 class ModernFinancialDashboard:
     def __init__(self):
@@ -231,7 +715,7 @@ class ModernFinancialDashboard:
 
                 # Extract bank balance from account details
                 bank_balance = 0
-                
+
                 # First try to get bank balance from net worth data
                 if 'accountDetailsBulkResponse' in nw_data:
                     account_map = nw_data['accountDetailsBulkResponse']['accountDetailsMap']
@@ -239,13 +723,13 @@ class ModernFinancialDashboard:
                         if 'depositSummary' in account_info:
                             balance = int(account_info['depositSummary']['currentBalance']['units'])
                             bank_balance += balance
-                
+
                 # If no bank balance found in net worth data, try bank_transactions data
                 if bank_balance == 0:
                     latest_bank = db.query(MCPData).filter(
                         MCPData.data_type == "bank_transactions"
                     ).order_by(MCPData.timestamp.desc()).first()
-                    
+
                     if latest_bank:
                         bank_data = self.extract_financial_data(latest_bank)
                         if 'accountDetailsBulkResponse' in bank_data:
@@ -254,11 +738,11 @@ class ModernFinancialDashboard:
                                 if 'depositSummary' in account_info:
                                     balance = int(account_info['depositSummary']['currentBalance']['units'])
                                     bank_balance += balance
-                
+
                 summary["bank_balance"] = bank_balance if bank_balance > 0 else "Not Available"
-                
+
                 summary["last_updated"] = latest_nw.timestamp.strftime("%Y-%m-%d %H:%M")
-            
+
             # Get credit score (currently not available in MCP response)
             latest_credit = db.query(MCPData).filter(
                 MCPData.data_type == "credit_report"
@@ -273,7 +757,7 @@ class ModernFinancialDashboard:
             else:
                 # Credit score not available in current MCP response
                 summary["credit_score"] = "Not Available"
-            
+
             # Get EPF balance (currently not available in MCP response)
             latest_epf = db.query(MCPData).filter(
                 MCPData.data_type == "epf_details"
@@ -299,7 +783,6 @@ class ModernFinancialDashboard:
     def main(self):
         """Main dashboard interface"""
         # Header with modern design
-        st.markdown('<div class="financial-summary">', unsafe_allow_html=True)
         col1, col2 = st.columns([3, 1])
         with col1:
             st.title("💰 Fi Financial AI Dashboard")
@@ -307,7 +790,6 @@ class ModernFinancialDashboard:
         with col2:
             if st.button("🔄 Refresh Data", type="primary", key="main_refresh_data"):
                 st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
         # Financial Overview with real data
         self.render_financial_overview()
@@ -349,6 +831,7 @@ class ModernFinancialDashboard:
         summary = self.get_parsed_financial_summary()
 
         # Key metrics in cards
+        st.markdown('<div class="metrics-grid">', unsafe_allow_html=True)
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -381,6 +864,8 @@ class ModernFinancialDashboard:
                 st.metric("🏦 Bank Balance", f"₹{bank_balance:,}")
             else:
                 st.metric("🏦 Bank Balance", bank_balance)
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Financial health indicator
         if isinstance(net_worth, (int, float)) and isinstance(credit_score, (int, float)):
