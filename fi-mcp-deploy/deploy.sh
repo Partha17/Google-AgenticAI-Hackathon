@@ -5,7 +5,7 @@ set -e
 # Configuration
 PROJECT_ID=${PROJECT_ID:-"your-project-id"}
 REGION=${REGION:-"us-central1"}
-FUNCTION_NAME="fi-mcp-function"
+FUNCTION_NAME="fi-mcp-server"
 
 echo "🚀 Deploying Fi MCP Server to Google Cloud Functions..."
 
@@ -28,21 +28,17 @@ if [ "$PROJECT_ID" = "your-project-id" ]; then
     exit 1
 fi
 
-# Set project
 echo "📋 Setting project to $PROJECT_ID..."
 gcloud config set project $PROJECT_ID
 
-# Enable required APIs
 echo "🔧 Enabling required APIs..."
 gcloud services enable cloudfunctions.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
 gcloud services enable artifactregistry.googleapis.com
 
-# Update dependencies
 echo "📦 Updating Go dependencies..."
 go mod tidy
 
-# Deploy function
 echo "🚀 Deploying function..."
 gcloud functions deploy $FUNCTION_NAME \
     --gen2 \
@@ -54,8 +50,7 @@ gcloud functions deploy $FUNCTION_NAME \
     --allow-unauthenticated \
     --memory=512Mi \
     --timeout=300s \
-    --max-instances=10 \
-    --env-vars-file=.env.yaml
+    --max-instances=10
 
 # Get function URL
 FUNCTION_URL=$(gcloud functions describe $FUNCTION_NAME --region=$REGION --format="value(serviceConfig.uri)")
